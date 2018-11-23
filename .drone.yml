@@ -1,5 +1,26 @@
 pipeline:
+  wait_for_postgres:
+    image: postgres
+    commands:
+      # wait for postgres service to become available
+      - |
+        until psql -U postgres -d test -h database \
+         -c "SELECT 1;" >/dev/null 2>&1; do sleep 1; done
+      # query the database
+      - |
+        psql -U postgres -d test -h database \
+          -c "SELECT * FROM pg_catalog.pg_tables;"
+
   test:
     image: golang:1.10
+    environment:
+      - POSTGRES_TEST_DSN="database=test host=database user=postgres sslmode=disable"
     commands:
-      - make test
+      - go test ./... -race
+
+services:
+  database:
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=test
