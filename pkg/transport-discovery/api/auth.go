@@ -10,7 +10,14 @@ import (
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
-func (api *API) auth(ctx context.Context, hdr http.Header) (*Auth, error) {
+// Auth struct maps SW-{Key,Nonce,Sig} headers
+type Auth struct {
+	Key   string
+	Nonce store.Nonce
+	Sig   string
+}
+
+func authFromHeaders(hdr http.Header) (*Auth, error) {
 	a := &Auth{}
 	if a.Key = hdr.Get("SW-Public"); a.Key == "" {
 		return nil, errors.New("SW-Public missing")
@@ -33,17 +40,21 @@ func (api *API) auth(ctx context.Context, hdr http.Header) (*Auth, error) {
 
 		return nil, fmt.Errorf("Error parsing SW-Nonce: %s", err.Error())
 	}
-	nonce := store.Nonce(nonceUint)
-
-	cur, err := api.store.GetNonce(ctx, a.Key)
-	if err != nil {
-		return nil, err
-	}
-
-	if nonce != store.Nonce(cur) {
-		return nil, errors.New("SW-Nonce does not match")
-	}
-	a.Nonce = nonce
-
+	a.Nonce = store.Nonce(nonceUint)
 	return a, nil
+}
+
+func (api *API) verifyAuth(ctx context.Context, auth *Auth) error {
+	cur, err := api.store.GetNonce(ctx, auth.Key)
+	if err != nil {
+		return err
+	}
+
+	if auth.Nonce != store.Nonce(cur) {
+		return errors.New("SW-Nonce does not match")
+	}
+
+	// TODO: Signature verification
+
+	return nil
 }

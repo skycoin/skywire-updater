@@ -3,11 +3,11 @@ package api
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/mockstore"
 )
@@ -25,25 +25,30 @@ func TestAuthFromHeaders(t *testing.T) {
 	defer ctrl.Finish()
 	mock := mockstore.NewMockStore(ctrl)
 
-	api := New(mock)
+	api := New(mock, APIOptions{})
 	ctx := context.Background()
 
 	t.Run("Valid", func(t *testing.T) {
 		mock.EXPECT().GetNonce(ctx, "pub_key").Return(store.Nonce(1), nil)
-		auth, err := api.auth(ctx, validHeaders())
-		require.NoError(t, err)
 
-		assert.Equal(t, "pub_key", auth.Key)
-		assert.Equal(t, store.Nonce(1), auth.Nonce)
-		assert.Equal(t, "sig", auth.Sig)
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", "/", nil)
+		r.Header = validHeaders()
+
+		api.ServeHTTP(w, r)
+
+		assert.NotEqual(t, 401, w.Code, w.Body.String())
 	})
+}
 
+func TestAuthFormat(t *testing.T) {
 	headers := []string{"SW-Public", "SW-Sig", "SW-Nonce"}
 	for _, header := range headers {
 		t.Run(header+"-IsMissing", func(t *testing.T) {
 			hdr := validHeaders()
 			hdr.Del(header)
-			_, err := api.auth(ctx, hdr)
+
+			_, err := authFromHeaders(hdr)
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), header)
 		})
@@ -54,7 +59,7 @@ func TestAuthFromHeaders(t *testing.T) {
 		hdr := validHeaders()
 		for _, n := range nonces {
 			hdr.Set("SW-Nonce", n)
-			_, err := api.auth(ctx, hdr)
+			_, err := authFromHeaders(hdr)
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "SW-Nonce: invalid syntax")
 		}

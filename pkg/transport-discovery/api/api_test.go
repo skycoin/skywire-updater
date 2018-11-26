@@ -13,6 +13,20 @@ import (
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/mockstore"
 )
 
+func TestBadRequest(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mock := mockstore.NewMockStore(ctrl)
+
+	api := New(mock, APIOptions{DisableSigVerify: true})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/register", bytes.NewBufferString("not-a-json"))
+
+	api.ServeHTTP(w, r)
+
+	assert.Equal(t, 400, w.Code)
+}
+
 func TestPOSTRegisterTransport(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -22,8 +36,6 @@ func TestPOSTRegisterTransport(t *testing.T) {
 	}
 
 	mock := mockstore.NewMockStore(ctrl)
-	mock.EXPECT().GetNonce(gomock.Any(), gomock.Any()).Return(store.Nonce(1), nil)
-	mock.EXPECT().IncrementNonce(gomock.Any(), "pub_key").Return(store.Nonce(2), nil)
 	mock.EXPECT().RegisterTransport(gomock.Any(), gomock.Any()).Do(
 		func(_ context.Context, in *store.Transport) error {
 			in.ID = 0xff
@@ -31,13 +43,12 @@ func TestPOSTRegisterTransport(t *testing.T) {
 		},
 	)
 
-	api := New(mock)
+	api := New(mock, APIOptions{DisableSigVerify: true})
 	w := httptest.NewRecorder()
 
 	post := bytes.NewBuffer(nil)
 	json.NewEncoder(post).Encode(trans)
 	r := httptest.NewRequest("POST", "/register", post)
-	r.Header = validHeaders()
 	api.ServeHTTP(w, r)
 
 	assert.Equal(t, 201, w.Code, w.Body.String())
