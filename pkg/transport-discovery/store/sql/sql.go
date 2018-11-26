@@ -24,6 +24,8 @@ func NewStore(dsn string) (*Store, error) {
 	return &Store{db}, nil
 }
 
+func (s *Store) Close() error { return s.db.Close() }
+
 // TODO: it should recover from panics
 func (s *Store) withinTx(fn func(tx *sql.Tx) error) error {
 	tx, err := s.db.Begin()

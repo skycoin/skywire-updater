@@ -32,6 +32,7 @@ func newTestStore(t *testing.T) *Store {
 
 func TestSQL(t *testing.T) {
 	s := newTestStore(t)
+	defer s.Close()
 
 	suite.Run(t, &tests.TransportSuite{Store: s})
 }
