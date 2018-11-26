@@ -21,10 +21,6 @@ type API struct {
 	opts  APIOptions
 }
 
-type Error struct {
-	Error string `json:"error"`
-}
-
 func New(s store.Store, opts APIOptions) *API {
 	mux := http.NewServeMux()
 	api := &API{mux: mux, store: s, opts: opts}
@@ -35,21 +31,34 @@ func New(s store.Store, opts APIOptions) *API {
 	return api
 }
 
+// Error is the object returned to the client when there's an error.
+type Error struct {
+	Error string `json:"error"`
+}
+
+func renderError(w http.ResponseWriter, code int, err error) {
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(&Error{
+		Error: err.Error(),
+	})
+}
+
+// apiHandler is an adapter to reduce api handler endpoint boilerplate
 type apiHandler func(w http.ResponseWriter, r *http.Request) (interface{}, error)
 
+// ServeHTTP implements http.Handler.
 func (fn apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Header.Set("Content-Type", "application/json")
-	enc := json.NewEncoder(w)
 
 	res, err := fn(w, r)
 	if err != nil {
-		res = &Error{Error: err.Error()}
-		w.WriteHeader(400)
+		renderError(w, 400, err)
+	} else {
+		json.NewEncoder(w).Encode(res)
 	}
-
-	enc.Encode(res)
 }
 
+// ServeHTTP implements http.Handler.
 func (api *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: Add some logging
 	ctx := r.Context()
@@ -57,22 +66,19 @@ func (api *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !api.opts.DisableSigVerify {
 		auth, err := authFromHeaders(r.Header)
 		if err != nil {
-			w.WriteHeader(401)
-			json.NewEncoder(w).Encode(&Error{Error: err.Error()})
+			renderError(w, 401, err)
 			return
 		}
 
 		if err := api.verifyAuth(r.Context(), auth); err != nil {
-			w.WriteHeader(401)
-			json.NewEncoder(w).Encode(&Error{Error: err.Error()})
+			renderError(w, 401, err)
 			return
 		}
 
 		if r.Method == "POST" && auth.Key != "" {
 			_, err := api.store.IncrementNonce(ctx, auth.Key)
 			if err != nil {
-				w.WriteHeader(500)
-				json.NewEncoder(w).Encode(&Error{Error: err.Error()})
+				renderError(w, 500, err)
 				return
 			}
 		}
