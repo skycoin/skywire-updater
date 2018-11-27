@@ -18,6 +18,7 @@ type Transport struct {
 	Edges []string
 }
 
+//go:generate mockgen -package=mockstore -destination=mockstore/mockstore.go github.com/watercompany/skywire-services/pkg/transport-discovery/store Store
 type Store interface {
 	TransportStore
 	NonceStore
