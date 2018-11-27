@@ -2,6 +2,12 @@ package store
 
 import (
 	"context"
+	"errors"
+)
+
+var (
+	// ErrNotEnoughACKs means that we're still waiting for a node to confirm the transport registration
+	ErrNotEnoughACKs = errors.New("Not enough ACKs")
 )
 
 // ID represent a Transport ID

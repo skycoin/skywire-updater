@@ -3,7 +3,6 @@ package sql
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"log"
 	"time"
 
@@ -121,7 +120,7 @@ func (s *Store) GetTransportByID(ctx context.Context, id store.ID) (*store.Trans
 	}
 
 	if acks < 2 {
-		return nil, errors.New("Not enough acks")
+		return nil, store.ErrNotEnoughACKs
 	}
 
 	return t, nil
@@ -132,7 +131,19 @@ func (s *Store) GetTransportsByEdge(ctx context.Context, edge string) ([]*store.
 }
 
 func (s *Store) DeregisterTransport(ctx context.Context, id store.ID) error {
-	panic("not implemented")
+	fn := func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM transports_ack WHERE transport_id = $1`, id); err != nil {
+			return err
+		}
+
+		if _, err := tx.ExecContext(ctx, `DELETE FROM transports WHERE id = $1`, id); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	return s.withinTx(fn)
 }
 
 var migrations = []string{

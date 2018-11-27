@@ -60,4 +60,14 @@ func (s *TransportSuite) TestRegister() {
 		assert.ElementsMatch(t, tr1.Edges, found.Edges, "Edges should contain the same PKs")
 		assert.True(t, len(tr1.Edges) == len(found.Edges))
 	})
+
+	t.Run("Transport should be deleted", func(t *testing.T) {
+		require.NoError(t,
+			s.Store.DeregisterTransport(ctx, tr1.ID),
+		)
+
+		_, err := s.Store.GetTransportByID(ctx, tr1.ID)
+		require.Error(t, err)
+		assert.Equal(t, store.ErrNotEnoughACKs, err, "Can't be found after .DeregisterTransport")
+	})
 }
