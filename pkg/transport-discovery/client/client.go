@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -16,6 +18,7 @@ type Client struct {
 	key    string
 }
 
+// Creates
 func New(addr string) *Client {
 	// Sanitize addr
 	if addr == "" {
@@ -47,6 +50,7 @@ func (c *Client) WithPubKey(key string) *Client {
 	return c
 }
 
+// Post POST a resource
 func (c *Client) Post(ctx context.Context, path string, payload interface{}) (*http.Response, error) {
 	body := bytes.NewBuffer(nil)
 	if err := json.NewEncoder(body).Encode(payload); err != nil {
@@ -58,19 +62,34 @@ func (c *Client) Post(ctx context.Context, path string, payload interface{}) (*h
 		return nil, err
 	}
 
-	return c.Do(req)
+	return c.Do(req.WithContext(ctx))
 }
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	if c.key != "" {
 		req.Header.Add("SW-Public", c.key)
 	}
+	// TODO: get nonce and sign the request
 
 	return c.client.Do(req)
 }
 
 func (c *Client) RegisterTransport(ctx context.Context, t *store.Transport) error {
-	return nil
+	resp, err := c.Post(ctx, "/register", t)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode == 201 {
+		return nil
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return fmt.Errorf("status: %d, error: %s", resp.StatusCode, string(body))
 }
 
 func (c *Client) DeregisterTransport(ctx context.Context, id store.ID) error {
