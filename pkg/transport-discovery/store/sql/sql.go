@@ -3,10 +3,10 @@ package sql
 import (
 	"context"
 	"database/sql"
-	"log"
 	"time"
 
 	"github.com/lib/pq"
+	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
@@ -45,23 +45,28 @@ func (s *Store) withinTx(fn func(tx *sql.Tx) error) error {
 func (s *Store) RegisterTransport(ctx context.Context, t *store.Transport) error {
 	var query string
 
+	var edges = [2]string{
+		t.Edges[0].Hex(),
+		t.Edges[1].Hex(),
+	}
+
 	fn := func(tx *sql.Tx) error {
 		// Find or Create transport (idempotency)
-		query = `SELECT id FROM transports WHERE edges @> ARRAY[$1, $2]::VARCHAR(32)[]`
-		if err := tx.QueryRowContext(ctx, query, t.Edges[0], t.Edges[1]).Scan(&t.ID); err != nil {
+		query = `SELECT id FROM transports WHERE edges @> ARRAY[$1, $2]::VARCHAR(66)[]`
+		if err := tx.QueryRowContext(ctx, query, edges[0], edges[1]).Scan(&t.ID); err != nil {
 			if err != sql.ErrNoRows {
 				return err
 			}
 
 			query = `INSERT INTO transports (edges) VALUES(ARRAY[$1, $2]) RETURNING id`
-			if err := tx.QueryRowContext(ctx, query, t.Edges[0], t.Edges[1]).Scan(&t.ID); err != nil {
+			if err := tx.QueryRowContext(ctx, query, edges[0], edges[1]).Scan(&t.ID); err != nil {
 				return err
 			}
 		}
 
 		// Add our ACK
-		query = `INSERT INTO transports_ack VALUES($1, $2) ON CONFLICT DO NOTHING`
-		if _, err := tx.ExecContext(ctx, query, t.ID, t.Edges[0]); err != nil {
+		query = `INSERT INTO transports_ack VALUES($1, $2)`
+		if _, err := tx.ExecContext(ctx, query, t.ID, edges[0]); err != nil {
 			return err
 		}
 
@@ -84,7 +89,10 @@ func (s *Store) waitForTransport(ctx context.Context, id store.ID, delay time.Du
 		case <-time.After(delay):
 			_, err := s.GetTransportByID(ctx, id)
 			if err != nil {
-				log.Printf("Error: %+v", err)
+				if err != sql.ErrNoRows {
+					return err
+				}
+
 				continue
 			}
 			return nil
@@ -98,20 +106,34 @@ func (s *Store) GetTransportByID(ctx context.Context, id store.ID) (*store.Trans
 
 	var t = &store.Transport{ID: id}
 	fn := func(tx *sql.Tx) error {
+		var edges []string
+
 		query = `SELECT edges FROM transports WHERE id = $1`
-		if err := tx.QueryRowContext(ctx, query, id).Scan(pq.Array(&t.Edges)); err != nil {
+		if err := tx.QueryRowContext(ctx, query, id).Scan(pq.Array(&edges)); err != nil {
 			if err == sql.ErrNoRows {
 				return nil
 			}
 			return err
 		}
 
+		pk1, err := cipher.PubKeyFromHex(edges[0])
+		if err != nil {
+			return err
+		}
+
+		pk2, err := cipher.PubKeyFromHex(edges[1])
+		if err != nil {
+			return err
+		}
+		t.Edges = []cipher.PubKey{pk1, pk2}
+
 		query = `SELECT COUNT(*) FROM transports_ack WHERE
 			transport_id = $1 AND node in ($2, $3)
 		`
-		if err := tx.QueryRowContext(ctx, query, id, t.Edges[0], t.Edges[1]).Scan(&acks); err != nil {
+		if err := tx.QueryRowContext(ctx, query, id, edges[0], edges[1]).Scan(&acks); err != nil {
 			return err
 		}
+
 		return nil
 	}
 
@@ -126,7 +148,7 @@ func (s *Store) GetTransportByID(ctx context.Context, id store.ID) (*store.Trans
 	return t, nil
 }
 
-func (s *Store) GetTransportsByEdge(ctx context.Context, edge string) ([]*store.Transport, error) {
+func (s *Store) GetTransportsByEdge(ctx context.Context, edge cipher.PubKey) ([]*store.Transport, error) {
 	panic("not implemented")
 }
 
@@ -149,14 +171,14 @@ func (s *Store) DeregisterTransport(ctx context.Context, id store.ID) error {
 var migrations = []string{
 	`CREATE TABLE IF NOT EXISTS transports (
 		id SERIAL PRIMARY KEY NOT NULL,
-		edges VARCHAR(32)[] NOT NULL
+		edges VARCHAR(66)[] NOT NULL
 	)`,
 	`CREATE INDEX IF NOT EXISTS
 	  transports_edges_idx on transports USING GIN ("edges")`,
 
 	`CREATE TABLE IF NOT EXISTS transports_ack (
 		transport_id INTEGER REFERENCES transports(id),
-		node VARCHAR(32),
+		node VARCHAR(66),
 		PRIMARY KEY (transport_id, node)
 	)`,
 }

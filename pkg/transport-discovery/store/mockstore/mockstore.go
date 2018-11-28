@@ -7,6 +7,7 @@ package mockstore
 import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
+	cipher "github.com/skycoin/skycoin/src/cipher"
 	store "github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 	reflect "reflect"
 )
@@ -47,7 +48,7 @@ func (mr *MockStoreMockRecorder) DeregisterTransport(arg0, arg1 interface{}) *go
 }
 
 // GetNonce mocks base method
-func (m *MockStore) GetNonce(arg0 context.Context, arg1 string) (store.Nonce, error) {
+func (m *MockStore) GetNonce(arg0 context.Context, arg1 cipher.PubKey) (store.Nonce, error) {
 	ret := m.ctrl.Call(m, "GetNonce", arg0, arg1)
 	ret0, _ := ret[0].(store.Nonce)
 	ret1, _ := ret[1].(error)
@@ -73,7 +74,7 @@ func (mr *MockStoreMockRecorder) GetTransportByID(arg0, arg1 interface{}) *gomoc
 }
 
 // GetTransportsByEdge mocks base method
-func (m *MockStore) GetTransportsByEdge(arg0 context.Context, arg1 string) ([]*store.Transport, error) {
+func (m *MockStore) GetTransportsByEdge(arg0 context.Context, arg1 cipher.PubKey) ([]*store.Transport, error) {
 	ret := m.ctrl.Call(m, "GetTransportsByEdge", arg0, arg1)
 	ret0, _ := ret[0].([]*store.Transport)
 	ret1, _ := ret[1].(error)
@@ -86,7 +87,7 @@ func (mr *MockStoreMockRecorder) GetTransportsByEdge(arg0, arg1 interface{}) *go
 }
 
 // IncrementNonce mocks base method
-func (m *MockStore) IncrementNonce(arg0 context.Context, arg1 string) (store.Nonce, error) {
+func (m *MockStore) IncrementNonce(arg0 context.Context, arg1 cipher.PubKey) (store.Nonce, error) {
 	ret := m.ctrl.Call(m, "IncrementNonce", arg0, arg1)
 	ret0, _ := ret[0].(store.Nonce)
 	ret1, _ := ret[1].(error)

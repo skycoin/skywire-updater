@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/mockstore"
@@ -31,8 +32,10 @@ func TestPOSTRegisterTransport(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	pk1, _ := cipher.GenerateKeyPair()
+	pk2, _ := cipher.GenerateKeyPair()
 	trans := store.Transport{
-		Edges: []string{"pub_key_1", "pub_key_2"},
+		Edges: []cipher.PubKey{pk1, pk2},
 	}
 
 	mock := mockstore.NewMockStore(ctrl)

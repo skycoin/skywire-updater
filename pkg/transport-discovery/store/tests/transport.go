@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -18,18 +19,17 @@ type TransportSuite struct {
 }
 
 func (s *TransportSuite) SetupTest() {
-	// Setup goes here if required
 }
 
 func (s *TransportSuite) TestRegister() {
 	t := s.T()
 	ctx := context.Background()
 
-	pk1 := "pub_key_a"
-	pk2 := "pub_key_b"
+	pk1, _ := cipher.GenerateKeyPair()
+	pk2, _ := cipher.GenerateKeyPair()
 
-	var tr1 = &store.Transport{Edges: []string{pk1, pk2}}
-	var tr2 = &store.Transport{Edges: []string{pk2, pk1}}
+	var tr1 = &store.Transport{Edges: []cipher.PubKey{pk1, pk2}}
+	var tr2 = &store.Transport{Edges: []cipher.PubKey{pk2, pk1}}
 
 	wg := sync.WaitGroup{}
 
@@ -52,7 +52,6 @@ func (s *TransportSuite) TestRegister() {
 
 	wg.Wait()
 	assert.Equal(t, tr1.ID, tr2.ID)
-
 	t.Run("Transport should be found", func(t *testing.T) {
 		found, err := s.Store.GetTransportByID(ctx, tr1.ID)
 		require.NoError(t, err)

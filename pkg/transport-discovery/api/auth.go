@@ -7,20 +7,27 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
 // Auth struct maps SW-{Key,Nonce,Sig} headers
 type Auth struct {
-	Key   string
+	Key   cipher.PubKey
 	Nonce store.Nonce
 	Sig   string
 }
 
 func authFromHeaders(hdr http.Header) (*Auth, error) {
 	a := &Auth{}
-	if a.Key = hdr.Get("SW-Public"); a.Key == "" {
+	if pub := hdr.Get("SW-Public"); pub == "" {
 		return nil, errors.New("SW-Public missing")
+	} else {
+		key, err := cipher.PubKeyFromHex(pub)
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing SW-Public: %s", err.Error())
+		}
+		a.Key = key
 	}
 
 	if a.Sig = hdr.Get("SW-Sig"); a.Sig == "" {

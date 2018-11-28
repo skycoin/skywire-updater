@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -24,7 +25,8 @@ func (s *NonceSuite) TestNonce() {
 	ctx := context.Background()
 
 	t.Run("GetUnexistingNonce", func(t *testing.T) {
-		nonce, err := s.Store.GetNonce(ctx, "not-a-registered-key")
+		pub, _ := cipher.GenerateKeyPair()
+		nonce, err := s.Store.GetNonce(ctx, pub)
 		require.NoError(t, err)
 		assert.Equal(t, store.Nonce(0), nonce)
 	})
@@ -35,15 +37,17 @@ func (s *NonceSuite) TestNonce() {
 			err   error
 		)
 
-		nonce, err = s.Store.IncrementNonce(ctx, "test-key")
+		pub, _ := cipher.GenerateKeyPair()
+
+		nonce, err = s.Store.IncrementNonce(ctx, pub)
 		require.NoError(t, err)
 		assert.Equal(t, store.Nonce(1), nonce)
 
-		nonce, err = s.Store.IncrementNonce(ctx, "test-key")
+		nonce, err = s.Store.IncrementNonce(ctx, pub)
 		require.NoError(t, err)
 		assert.Equal(t, store.Nonce(2), nonce)
 
-		nonce, err = s.Store.GetNonce(ctx, "test-key")
+		nonce, err = s.Store.GetNonce(ctx, pub)
 		require.NoError(t, err)
 		assert.Equal(t, store.Nonce(2), nonce)
 	})

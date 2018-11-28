@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"errors"
+
+	"github.com/skycoin/skycoin/src/cipher"
 )
 
 var (
@@ -21,7 +23,7 @@ type Transport struct {
 	// ID is the Transport ID
 	ID ID
 	// Edges are public keys of each Node
-	Edges []string
+	Edges []cipher.PubKey
 }
 
 //go:generate mockgen -package=mockstore -destination=mockstore/mockstore.go github.com/watercompany/skywire-services/pkg/transport-discovery/store Store
@@ -37,10 +39,10 @@ type TransportStore interface {
 	GetTransportByID(context.Context, ID) (*Transport, error)
 
 	// TODO: sorting meta arg
-	GetTransportsByEdge(context.Context, string) ([]*Transport, error)
+	GetTransportsByEdge(context.Context, cipher.PubKey) ([]*Transport, error)
 }
 
 type NonceStore interface {
-	IncrementNonce(context.Context, string) (Nonce, error)
-	GetNonce(context.Context, string) (Nonce, error)
+	IncrementNonce(context.Context, cipher.PubKey) (Nonce, error)
+	GetNonce(context.Context, cipher.PubKey) (Nonce, error)
 }

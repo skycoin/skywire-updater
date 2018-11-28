@@ -7,14 +7,17 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/mockstore"
 )
 
+var testPubKey, _ = cipher.GenerateKeyPair()
+
 func validHeaders() http.Header {
 	hdr := http.Header{}
-	hdr.Set("SW-Public", "pub_key")
+	hdr.Set("SW-Public", testPubKey.Hex())
 	hdr.Set("SW-Sig", "sig")
 	hdr.Set("SW-Nonce", "1")
 	return hdr
@@ -29,7 +32,7 @@ func TestAuthFromHeaders(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Valid", func(t *testing.T) {
-		mock.EXPECT().GetNonce(ctx, "pub_key").Return(store.Nonce(1), nil)
+		mock.EXPECT().GetNonce(ctx, testPubKey).Return(store.Nonce(1), nil)
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/", nil)

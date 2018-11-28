@@ -75,7 +75,7 @@ func (api *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if r.Method == "POST" && auth.Key != "" {
+		if r.Method == "POST" && !auth.Key.Null() {
 			_, err := api.store.IncrementNonce(ctx, auth.Key)
 			if err != nil {
 				renderError(w, 500, err)

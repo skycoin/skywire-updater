@@ -4,21 +4,22 @@ import (
 	"context"
 	"sync"
 
+	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
 type Store struct {
 	sync.RWMutex
-	db map[string]store.Nonce
+	db map[cipher.PubKey]store.Nonce
 }
 
 func NewStore() *Store {
 	return &Store{
-		db: make(map[string]store.Nonce),
+		db: make(map[cipher.PubKey]store.Nonce),
 	}
 }
 
-func (s *Store) IncrementNonce(_ context.Context, key string) (store.Nonce, error) {
+func (s *Store) IncrementNonce(_ context.Context, key cipher.PubKey) (store.Nonce, error) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -29,7 +30,7 @@ func (s *Store) IncrementNonce(_ context.Context, key string) (store.Nonce, erro
 	return nonce, nil
 }
 
-func (s *Store) GetNonce(_ context.Context, key string) (store.Nonce, error) {
+func (s *Store) GetNonce(_ context.Context, key cipher.PubKey) (store.Nonce, error) {
 	s.RLock()
 	defer s.RUnlock()
 	return s.db[key], nil
