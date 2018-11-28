@@ -70,7 +70,7 @@ func (api *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := api.verifyAuth(r.Context(), auth); err != nil {
+		if err := api.VerifyAuth(r, auth); err != nil {
 			renderError(w, 401, err)
 			return
 		}

@@ -1,9 +1,11 @@
 package api
 
 import (
-	"context"
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -15,23 +17,29 @@ import (
 type Auth struct {
 	Key   cipher.PubKey
 	Nonce store.Nonce
-	Sig   string
+	Sig   cipher.Sig
 }
 
 func authFromHeaders(hdr http.Header) (*Auth, error) {
 	a := &Auth{}
-	if pub := hdr.Get("SW-Public"); pub == "" {
+	if v := hdr.Get("SW-Public"); v == "" {
 		return nil, errors.New("SW-Public missing")
 	} else {
-		key, err := cipher.PubKeyFromHex(pub)
+		key, err := cipher.PubKeyFromHex(v)
 		if err != nil {
 			return nil, fmt.Errorf("Error parsing SW-Public: %s", err.Error())
 		}
 		a.Key = key
 	}
 
-	if a.Sig = hdr.Get("SW-Sig"); a.Sig == "" {
+	if v := hdr.Get("SW-Sig"); v == "" {
 		return nil, errors.New("SW-Sig missing")
+	} else {
+		sig, err := cipher.SigFromHex(v)
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing SW-Sig:'%s': %s", v, err.Error())
+		}
+		a.Sig = sig
 	}
 
 	nonceStr := hdr.Get("SW-Nonce")
@@ -51,8 +59,16 @@ func authFromHeaders(hdr http.Header) (*Auth, error) {
 	return a, nil
 }
 
-func (api *API) verifyAuth(ctx context.Context, auth *Auth) error {
-	cur, err := api.store.GetNonce(ctx, auth.Key)
+func (a *Auth) Verify(in []byte) error {
+	hash := cipher.SumSHA256([]byte(
+		fmt.Sprintf("%s%d", in, a.Nonce),
+	))
+
+	return cipher.VerifyPubKeySignedHash(a.Key, a.Sig, hash)
+}
+
+func (api *API) VerifyAuth(r *http.Request, auth *Auth) error {
+	cur, err := api.store.GetNonce(r.Context(), auth.Key)
 	if err != nil {
 		return err
 	}
@@ -61,7 +77,46 @@ func (api *API) verifyAuth(ctx context.Context, auth *Auth) error {
 		return errors.New("SW-Nonce does not match")
 	}
 
-	// TODO: Signature verification
+	body, err := peekBody(r)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	payload, err := ioutil.ReadAll(body)
+	if err != nil {
+		return err
+	}
+
+	return auth.Verify(payload)
+}
+
+// peekBody reads the body from http.Request without removing the data from the original body.
+func peekBody(r *http.Request) (io.ReadCloser, error) {
+	var err error
+	save := r.Body
+	save, r.Body, err = drainBody(r.Body)
+
+	return save, err
+}
+
+// drainBody reads all of b to memory and then returns two equivalent
+// ReadClosers yielding the same bytes.
+
+// It returns an error if the initial slurp of all bytes fails. It does not attempt
+// to make the returned ReadClosers have identical error-matching behavior.
+func drainBody(b io.ReadCloser) (r1, r2 io.ReadCloser, err error) {
+	if b == http.NoBody {
+		// No copying needed. Preserve the magic sentinel meaning of NoBody.
+		return http.NoBody, http.NoBody, nil
+	}
+	var buf bytes.Buffer
+	if _, err = buf.ReadFrom(b); err != nil {
+		return nil, b, err
+	}
+
+	if err = b.Close(); err != nil {
+		return nil, b, err
+	}
+
+	return ioutil.NopCloser(&buf), ioutil.NopCloser(bytes.NewReader(buf.Bytes())), nil
 }
