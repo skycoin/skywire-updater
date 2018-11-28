@@ -7,15 +7,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
+	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
 type Client struct {
 	addr   string
 	client http.Client
-	key    string
+	key    cipher.PubKey
+	sec    cipher.SecKey
 }
 
 // Creates
@@ -39,14 +42,15 @@ func New(addr string) *Client {
 	}
 }
 
-// WithPubKey set a public key to the client.
-// When PubKey is set, the client will sign request before submitting.
+// WithPubAndSecKey set a public key to the client.
+// When keys are set, the client will sign request before submitting.
 // The signature information is transmitted in the header using:
 // * SW-Public: The specified public key
 // * SW-Nonce:  The nonce for that public key
 // * SW-Sig:    The signature of the payload + the nonce
-func (c *Client) WithPubKey(key string) *Client {
+func (c *Client) WithPubAndSecKey(key cipher.PubKey, sec cipher.SecKey) *Client {
 	c.key = key
+	c.sec = sec
 	return c
 }
 
@@ -66,12 +70,58 @@ func (c *Client) Post(ctx context.Context, path string, payload interface{}) (*h
 }
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	if c.key != "" {
-		req.Header.Add("SW-Public", c.key)
+	if !c.key.Null() {
+		req.Header.Add("SW-Public", c.key.Hex())
+		nonce, err := c.getNextNonce(req.Context(), c.key)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Add("SW-Nonce", strconv.FormatUint(uint64(nonce), 10))
+
+		body, _ := ioutil.ReadAll(req.Body)
+		req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+
+		hash := cipher.SumSHA256([]byte(
+			fmt.Sprintf("%s%d", string(body), nonce),
+		))
+
+		sig, err := cipher.SignHash(hash, c.sec)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Add("SW-Sig", sig.Hex())
 	}
-	// TODO: get nonce and sign the request
 
 	return c.client.Do(req)
+}
+
+func (c *Client) getNextNonce(ctx context.Context, key cipher.PubKey) (store.Nonce, error) {
+	resp, err := c.client.Get(c.addr + "/incrementing-nonce/" + key.Hex())
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return 0, err
+		}
+
+		return 0, fmt.Errorf("error getting current nonce: status: %d <- %s", resp.StatusCode, string(body))
+	}
+
+	// TODO: Move this to ./store
+	var v struct {
+		Edge      string `json:"edge"`
+		NextNonce uint64 `json:"next_nonce"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
+		return 0, err
+	}
+
+	return store.Nonce(v.NextNonce), nil
 }
 
 func (c *Client) RegisterTransport(ctx context.Context, t *store.Transport) error {
@@ -79,6 +129,7 @@ func (c *Client) RegisterTransport(ctx context.Context, t *store.Transport) erro
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode == 201 {
 		return nil

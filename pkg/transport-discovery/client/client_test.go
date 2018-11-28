@@ -1,16 +1,21 @@
 package client
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 
+	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
+
+var testPubKey, testSecKey = cipher.GenerateKeyPair()
 
 func TestNew(t *testing.T) {
 	tests := []struct {
@@ -30,20 +35,33 @@ func TestNew(t *testing.T) {
 
 func TestClientAuth(t *testing.T) {
 	wg := sync.WaitGroup{}
-	defer wg.Wait()
 
 	srv := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			defer wg.Done()
-			assert.Equal(t, "pub_key", r.Header.Get("SW-Public"))
+			switch url := r.URL.String(); url {
+			case "/":
+				defer wg.Done()
+				assert.Equal(t, testPubKey.Hex(), r.Header.Get("SW-Public"))
+				assert.Equal(t, "1", r.Header.Get("SW-Nonce"))
+				assert.NotEmpty(t, r.Header.Get("SW-Sig")) // TODO: check for the right key
+
+			case "/incrementing-nonce/" + testPubKey.Hex():
+				fmt.Fprintf(w, `{"edge": "%s", "next_nonce": 1}`, testPubKey.Hex())
+
+			default:
+				t.Errorf("Don't know how to handle URL = '%s'", url)
+			}
 		},
 	))
 	defer srv.Close()
 
-	c := New(srv.URL).WithPubKey("pub_key")
+	c := New(srv.URL).WithPubAndSecKey(testPubKey, testSecKey)
 
 	wg.Add(1)
-	c.Post(context.Background(), "/", nil)
+	_, err := c.Post(context.Background(), "/", bytes.NewBufferString("test payload"))
+	require.NoError(t, err)
+
+	wg.Wait()
 }
 
 func TestRegisterTransport(t *testing.T) {
