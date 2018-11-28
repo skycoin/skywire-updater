@@ -78,7 +78,11 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		}
 		req.Header.Add("SW-Nonce", strconv.FormatUint(uint64(nonce), 10))
 
-		body, _ := ioutil.ReadAll(req.Body)
+		body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		req.Body.Close()
 		req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 
 		hash := cipher.SumSHA256([]byte(
