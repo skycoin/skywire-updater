@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/skycoin/skycoin/src/cipher"
 )
@@ -27,6 +28,8 @@ type Transport struct {
 	ID ID
 	// Edges are public keys of each Node
 	Edges []cipher.PubKey
+	// Registered field specifies the time of when the Transport was registered.
+	Registered time.Time
 }
 
 //go:generate mockgen -package=mockstore -destination=mockstore/mockstore.go github.com/watercompany/skywire-services/pkg/transport-discovery/store Store

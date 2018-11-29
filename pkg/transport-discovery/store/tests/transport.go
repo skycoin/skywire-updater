@@ -52,12 +52,20 @@ func (s *TransportSuite) TestRegister() {
 
 	wg.Wait()
 	assert.Equal(t, tr1.ID, tr2.ID)
+
+	t.Run(".Registered has been set", func(t *testing.T) {
+		assert.Equal(t, tr1.Registered, tr2.Registered)
+		assert.False(t, tr1.Registered.IsZero(), "Can't be zero")
+		assert.True(t, time.Now().After(tr1.Registered))
+	})
+
 	t.Run("Transport should be found", func(t *testing.T) {
 		found, err := s.Store.GetTransportByID(ctx, tr1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, tr1.ID, found.ID, "IDs should be equal")
 		assert.ElementsMatch(t, tr1.Edges, found.Edges, "Edges should contain the same PKs")
 		assert.True(t, len(tr1.Edges) == len(found.Edges))
+		assert.Equal(t, tr1.Registered, found.Registered)
 	})
 
 	t.Run("Transport should be deleted", func(t *testing.T) {

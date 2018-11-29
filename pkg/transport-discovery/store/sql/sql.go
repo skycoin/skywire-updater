@@ -52,14 +52,14 @@ func (s *Store) RegisterTransport(ctx context.Context, t *store.Transport) error
 
 	fn := func(tx *sql.Tx) error {
 		// Find or Create transport (idempotency)
-		query = `SELECT id FROM transports WHERE edges @> ARRAY[$1, $2]::VARCHAR(66)[]`
-		if err := tx.QueryRowContext(ctx, query, edges[0], edges[1]).Scan(&t.ID); err != nil {
+		query = `SELECT id, registered FROM transports WHERE edges @> ARRAY[$1, $2]::VARCHAR(66)[]`
+		if err := tx.QueryRowContext(ctx, query, edges[0], edges[1]).Scan(&t.ID, &t.Registered); err != nil {
 			if err != sql.ErrNoRows {
 				return err
 			}
 
-			query = `INSERT INTO transports (edges) VALUES(ARRAY[$1, $2]) RETURNING id`
-			if err := tx.QueryRowContext(ctx, query, edges[0], edges[1]).Scan(&t.ID); err != nil {
+			query = `INSERT INTO transports (edges) VALUES(ARRAY[$1, $2]) RETURNING id, registered`
+			if err := tx.QueryRowContext(ctx, query, edges[0], edges[1]).Scan(&t.ID, &t.Registered); err != nil {
 				return err
 			}
 		}
@@ -108,8 +108,8 @@ func (s *Store) GetTransportByID(ctx context.Context, id store.ID) (*store.Trans
 	fn := func(tx *sql.Tx) error {
 		var edges []string
 
-		query = `SELECT edges FROM transports WHERE id = $1`
-		if err := tx.QueryRowContext(ctx, query, id).Scan(pq.Array(&edges)); err != nil {
+		query = `SELECT edges, registered FROM transports WHERE id = $1`
+		if err := tx.QueryRowContext(ctx, query, id).Scan(pq.Array(&edges), &t.Registered); err != nil {
 			if err == sql.ErrNoRows {
 				return nil
 			}
@@ -171,7 +171,8 @@ func (s *Store) DeregisterTransport(ctx context.Context, id store.ID) error {
 var migrations = []string{
 	`CREATE TABLE IF NOT EXISTS transports (
 		id SERIAL PRIMARY KEY NOT NULL,
-		edges VARCHAR(66)[] NOT NULL
+		edges VARCHAR(66)[] NOT NULL,
+		registered TIMESTAMP DEFAULT Now()
 	)`,
 	`CREATE INDEX IF NOT EXISTS
 	  transports_edges_idx on transports USING GIN ("edges")`,
