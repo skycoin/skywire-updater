@@ -2,8 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
-	"log"
 	"net/http"
 	"strings"
 
@@ -32,10 +30,9 @@ func (api *API) handleDeregister(w http.ResponseWriter, r *http.Request) (interf
 func (api *API) handleIncrementingNonces(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	split := strings.Split(r.URL.String(), "/")
 	if len(split) < 3 || split[2] == "" {
-		return nil, errors.New("Public Key can't be empty")
+		return nil, ErrEmptyPubKey
 	}
 
-	log.Printf("s: %q", split[2])
 	pubKey, err := cipher.PubKeyFromHex(split[2])
 	if err != nil {
 		return nil, err

@@ -95,7 +95,7 @@ func TestGETIncrementingNonces(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/incrementing-nonces/"+pubKey.Hex(), nil)
 		api.ServeHTTP(w, r)
-		require.Equal(t, 400, w.Code, w.Body.String())
+		require.Equal(t, 500, w.Code, w.Body.String())
 		assert.Contains(t, w.Body.String(), boom.Error())
 	})
 

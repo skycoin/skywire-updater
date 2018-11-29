@@ -2,9 +2,15 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
+)
+
+var (
+	ErrEmptyPubKey = errors.New("PublicKey can't by empty")
 )
 
 // APIOptions control particular behavior
@@ -53,10 +59,30 @@ func (fn apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	res, err := fn(w, r)
 	if err != nil {
-		renderError(w, 400, err)
-	} else {
-		json.NewEncoder(w).Encode(res)
+		var status int
+
+		switch err {
+		case ErrEmptyPubKey, cipher.ErrInvalidPubKey:
+			status = 400
+		}
+
+		// we still haven't found the error
+		if status == 0 {
+			switch err.(type) {
+			case *json.SyntaxError:
+				status = 400
+			}
+		}
+
+		// we fallback to 500
+		if status == 0 {
+			status = 500
+		}
+
+		renderError(w, status, err)
+		return
 	}
+	json.NewEncoder(w).Encode(res)
 }
 
 func (api *API) withSigVer(next http.Handler) http.Handler {
