@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/skycoin/skycoin/src/cipher"
 )
@@ -17,6 +18,8 @@ type ID uint64
 
 // Nonce is used to sign requests in order to avoid replay attack
 type Nonce uint64
+
+func (n Nonce) String() string { return fmt.Sprintf("%d", n) }
 
 // Transport represent a single-hop communication between two Skywire Nodes
 type Transport struct {

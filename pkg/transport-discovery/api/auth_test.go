@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,6 +10,7 @@ import (
 	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/watercompany/skywire-services/pkg/transport-discovery/auth"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/mockstore"
 )
@@ -18,19 +18,15 @@ import (
 var testPubKey, testSec = cipher.GenerateKeyPair()
 
 // validHeaders returns a valid set of headers
-func validHeaders(t *testing.T, payload string) http.Header {
-	nonce := "1"
-	hash := cipher.SumSHA256([]byte(
-		fmt.Sprintf("%s%s", payload, nonce),
-	))
-
-	sig, err := cipher.SignHash(hash, testSec)
+func validHeaders(t *testing.T, payload []byte) http.Header {
+	nonce := store.Nonce(1)
+	sig, err := auth.Sign(payload, nonce, testSec)
 	require.NoError(t, err)
 
 	hdr := http.Header{}
 	hdr.Set("SW-Public", testPubKey.Hex())
 	hdr.Set("SW-Sig", sig.Hex())
-	hdr.Set("SW-Nonce", nonce)
+	hdr.Set("SW-Nonce", nonce.String())
 
 	return hdr
 }
@@ -48,7 +44,7 @@ func TestAuthFromHeaders(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/", nil)
-		r.Header = validHeaders(t, "")
+		r.Header = validHeaders(t, nil)
 
 		api.ServeHTTP(w, r)
 
@@ -60,7 +56,7 @@ func TestAuthFormat(t *testing.T) {
 	headers := []string{"SW-Public", "SW-Sig", "SW-Nonce"}
 	for _, header := range headers {
 		t.Run(header+"-IsMissing", func(t *testing.T) {
-			hdr := validHeaders(t, "")
+			hdr := validHeaders(t, nil)
 			hdr.Del(header)
 
 			_, err := authFromHeaders(hdr)
@@ -71,7 +67,7 @@ func TestAuthFormat(t *testing.T) {
 
 	t.Run("NonceFormat", func(t *testing.T) {
 		nonces := []string{"not_a_number", "-1", "0x0"}
-		hdr := validHeaders(t, "")
+		hdr := validHeaders(t, nil)
 		for _, n := range nonces {
 			hdr.Set("SW-Nonce", n)
 			_, err := authFromHeaders(hdr)
@@ -83,18 +79,13 @@ func TestAuthFormat(t *testing.T) {
 
 func TestAuthSignatureVerification(t *testing.T) {
 	nonce := store.Nonce(0xdeadbeef)
-	payload := "test payload"
+	payload := []byte("dead beed")
 
-	hash := cipher.SumSHA256([]byte(
-		fmt.Sprintf("%s%d", payload, nonce),
-	))
-
-	pub, sec := cipher.GenerateKeyPair()
-	sig, err := cipher.SignHash(hash, sec)
+	sig, err := auth.Sign(payload, nonce, testSec)
 	require.NoError(t, err)
 
 	auth := &Auth{
-		Key:   pub,
+		Key:   testPubKey,
 		Nonce: nonce,
 		Sig:   sig,
 	}

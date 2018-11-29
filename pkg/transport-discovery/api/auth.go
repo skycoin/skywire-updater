@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/skycoin/skycoin/src/cipher"
+	"github.com/watercompany/skywire-services/pkg/transport-discovery/auth"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
@@ -60,11 +61,7 @@ func authFromHeaders(hdr http.Header) (*Auth, error) {
 }
 
 func (a *Auth) Verify(in []byte) error {
-	hash := cipher.SumSHA256([]byte(
-		fmt.Sprintf("%s%d", in, a.Nonce),
-	))
-
-	return cipher.VerifyPubKeySignedHash(a.Key, a.Sig, hash)
+	return auth.Verify(in, a.Nonce, a.Key, a.Sig)
 }
 
 func (api *API) VerifyAuth(r *http.Request, auth *Auth) error {
