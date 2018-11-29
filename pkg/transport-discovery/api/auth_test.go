@@ -40,10 +40,11 @@ func TestAuthFromHeaders(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Valid", func(t *testing.T) {
+		mock.EXPECT().IncrementNonce(gomock.Any(), gomock.Any()).AnyTimes()
 		mock.EXPECT().GetNonce(ctx, testPubKey).Return(store.Nonce(1), nil)
 
 		w := httptest.NewRecorder()
-		r := httptest.NewRequest("GET", "/", nil)
+		r := httptest.NewRequest("POST", "/register", nil)
 		r.Header = validHeaders(t, nil)
 
 		api.ServeHTTP(w, r)
