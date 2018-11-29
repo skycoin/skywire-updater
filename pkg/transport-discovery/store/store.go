@@ -41,7 +41,7 @@ type Store interface {
 type TransportStore interface {
 	// RegisterTransport
 	RegisterTransport(context.Context, *Transport) error
-	DeregisterTransport(context.Context, ID) error
+	DeregisterTransport(context.Context, ID) (*Transport, error)
 	GetTransportByID(context.Context, ID) (*Transport, error)
 
 	// TODO: sorting meta arg

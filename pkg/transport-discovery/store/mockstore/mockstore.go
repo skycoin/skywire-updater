@@ -36,10 +36,11 @@ func (m *MockStore) EXPECT() *MockStoreMockRecorder {
 }
 
 // DeregisterTransport mocks base method
-func (m *MockStore) DeregisterTransport(arg0 context.Context, arg1 store.ID) error {
+func (m *MockStore) DeregisterTransport(arg0 context.Context, arg1 store.ID) (*store.Transport, error) {
 	ret := m.ctrl.Call(m, "DeregisterTransport", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*store.Transport)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // DeregisterTransport indicates an expected call of DeregisterTransport

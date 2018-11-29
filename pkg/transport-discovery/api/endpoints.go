@@ -2,7 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/skycoin/skycoin/src/cipher"
@@ -23,8 +25,28 @@ func (api *API) handleRegister(w http.ResponseWriter, r *http.Request) (interfac
 	return t, nil
 }
 
+func (api *API) handleTransports(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	split := strings.Split(r.URL.String(), "/")
+	if len(split) < 3 || split[2] == "" {
+		return nil, ErrEmptyTransportID
+	}
+	id, err := strconv.ParseUint(split[2], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	switch r.Method {
+	case "GET":
+		return api.store.GetTransportByID(r.Context(), store.ID(id))
+	case "DELETE":
+		return api.store.DeregisterTransport(r.Context(), store.ID(id))
+	}
+
+	return nil, errors.New("Invalid HTTP Method")
+}
+
 func (api *API) handleDeregister(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return nil, nil
+	panic("not implemented")
 }
 
 func (api *API) handleIncrementingNonces(w http.ResponseWriter, r *http.Request) (interface{}, error) {

@@ -64,6 +64,29 @@ func TestPOSTRegisterTransport(t *testing.T) {
 	assert.Equal(t, trans.Registered.Unix(), resp.Registered)
 }
 
+func TestGETTransportByID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mock := mockstore.NewMockStore(ctrl)
+
+	api := New(mock, APIOptions{DisableSigVerify: true})
+
+	ctx := context.Background()
+
+	mock.EXPECT().GetTransportByID(ctx, store.ID(1))
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/ids/1", nil)
+	api.ServeHTTP(w, r)
+	require.Equal(t, 200, w.Code, w.Body.String())
+
+	t.Skip("Missing Response verification")
+}
+
+func TestDELETETransportByID(t *testing.T) {
+	t.Skip("Not Implemented")
+}
+
 func TestGETIncrementingNonces(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

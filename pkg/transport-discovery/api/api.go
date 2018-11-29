@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	ErrEmptyPubKey = errors.New("PublicKey can't by empty")
+	ErrEmptyPubKey      = errors.New("PublicKey can't by empty")
+	ErrEmptyTransportID = errors.New("TransportID can't by empty")
 )
 
 // APIOptions control particular behavior
@@ -32,6 +33,7 @@ func New(s store.Store, opts APIOptions) *API {
 	api := &API{mux: mux, store: s, opts: opts}
 
 	mux.Handle("/register", api.withSigVer(apiHandler(api.handleRegister)))
+	mux.Handle("/ids/", api.withSigVer(apiHandler(api.handleTransports)))
 	mux.Handle("/deregister", api.withSigVer(apiHandler(api.handleDeregister)))
 	mux.Handle("/incrementing-nonces/", apiHandler(api.handleIncrementingNonces))
 
@@ -62,7 +64,7 @@ func (fn apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var status int
 
 		switch err {
-		case ErrEmptyPubKey, cipher.ErrInvalidPubKey:
+		case ErrEmptyPubKey, ErrEmptyTransportID, cipher.ErrInvalidPubKey:
 			status = 400
 		}
 

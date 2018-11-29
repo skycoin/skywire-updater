@@ -116,6 +116,7 @@ func (s *Store) GetTransportByID(ctx context.Context, id store.ID) (*store.Trans
 			return err
 		}
 
+		// TODO: use a Scanner to de duplicate this from other places
 		pk1, err := cipher.PubKeyFromHex(edges[0])
 		if err != nil {
 			return err
@@ -152,20 +153,41 @@ func (s *Store) GetTransportsByEdge(ctx context.Context, edge cipher.PubKey) ([]
 	panic("not implemented")
 }
 
-func (s *Store) DeregisterTransport(ctx context.Context, id store.ID) error {
+func (s *Store) DeregisterTransport(ctx context.Context, id store.ID) (*store.Transport, error) {
+	var t store.Transport
+
 	fn := func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM transports_ack WHERE transport_id = $1`, id); err != nil {
 			return err
 		}
 
-		if _, err := tx.ExecContext(ctx, `DELETE FROM transports WHERE id = $1`, id); err != nil {
+		row := tx.QueryRowContext(ctx, `DELETE FROM transports WHERE id = $1 RETURNING registered, edges`, id)
+
+		var edges []string
+		if err := row.Scan(&t.Registered, pq.Array(&edges)); err != nil {
 			return err
 		}
+
+		pk1, err := cipher.PubKeyFromHex(edges[0])
+		if err != nil {
+			return err
+		}
+
+		pk2, err := cipher.PubKeyFromHex(edges[1])
+		if err != nil {
+			return err
+		}
+		t.Edges = []cipher.PubKey{pk1, pk2}
 
 		return nil
 	}
 
-	return s.withinTx(fn)
+	if err := s.withinTx(fn); err != nil {
+		return nil, err
+	}
+
+	t.ID = id
+	return &t, nil
 }
 
 var migrations = []string{

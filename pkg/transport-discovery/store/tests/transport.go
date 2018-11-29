@@ -69,11 +69,11 @@ func (s *TransportSuite) TestRegister() {
 	})
 
 	t.Run("Transport should be deleted", func(t *testing.T) {
-		require.NoError(t,
-			s.Store.DeregisterTransport(ctx, tr1.ID),
-		)
+		trans, err := s.Store.DeregisterTransport(ctx, tr1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, tr1, trans)
 
-		_, err := s.Store.GetTransportByID(ctx, tr1.ID)
+		_, err = s.Store.GetTransportByID(ctx, tr1.ID)
 		require.Error(t, err)
 		assert.Equal(t, store.ErrNotEnoughACKs, err, "Can't be found after .DeregisterTransport")
 	})
