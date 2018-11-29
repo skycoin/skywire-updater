@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/skycoin/skycoin/src/cipher"
@@ -34,19 +35,17 @@ func TestPOSTRegisterTransport(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	now := time.Now()
 	pk1, _ := cipher.GenerateKeyPair()
 	pk2, _ := cipher.GenerateKeyPair()
 	trans := store.Transport{
-		Edges: []cipher.PubKey{pk1, pk2},
+		ID:         0xff,
+		Edges:      []cipher.PubKey{pk1, pk2},
+		Registered: now,
 	}
 
 	mock := mockstore.NewMockStore(ctrl)
-	mock.EXPECT().RegisterTransport(gomock.Any(), gomock.Any()).Do(
-		func(_ context.Context, in *store.Transport) error {
-			in.ID = 0xff
-			return nil
-		},
-	)
+	mock.EXPECT().RegisterTransport(gomock.Any(), gomock.Any()).Return(nil)
 
 	api := New(mock, APIOptions{DisableSigVerify: true})
 	w := httptest.NewRecorder()
@@ -58,8 +57,11 @@ func TestPOSTRegisterTransport(t *testing.T) {
 
 	assert.Equal(t, 201, w.Code, w.Body.String())
 
-	json.NewDecoder(bytes.NewBuffer(w.Body.Bytes())).Decode(&trans)
-	assert.NotEmpty(t, trans.ID)
+	var resp TransportResponse
+	json.NewDecoder(bytes.NewBuffer(w.Body.Bytes())).Decode(&resp)
+	assert.Equal(t, trans.ID, resp.ID)
+	assert.Equal(t, trans.Edges, resp.Edges)
+	assert.Equal(t, trans.Registered.Unix(), resp.Registered)
 }
 
 func TestGETIncrementingNonces(t *testing.T) {
