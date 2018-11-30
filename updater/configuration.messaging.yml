@@ -1,0 +1,22 @@
+active_update_checkers:
+  naive:
+    interval: "30s"
+    notify_url: "http://localhost:8989/update"
+    kind: "naive"
+
+updaters:
+  custom:
+    kind: "custom"
+
+services:
+  skywire-messaging-server:
+    official_name: "skywire-messaging"
+    local_name: "msgsrv"
+    update_script: "/Users/ivan/Desktop/skycoin/pkg/github.com/watercompany/skywire-services/updater/pkg/updater/scripts/skywire-messaging.sh"
+    script_interpreter: "/bin/bash"
+    script_timeout: "20m"
+    script_extra_arguments:
+      - "msgsrv -c localhost:9094 -a localhost:8084 -s test-server"
+    active_update_checker: "naive"
+    repository: "/skycoin/skywire"
+    updater: "custom"
