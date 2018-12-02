@@ -79,7 +79,7 @@ type ServerGateway struct {
 }
 
 // NewServerGateway returns a ServerGateway
-func NewServerGateway(conf config.Configuration) *ServerGateway {
+func NewServerGateway(conf *config.Configuration) *ServerGateway {
 	return &ServerGateway{
 		starter: supervisor.New(conf),
 	}
@@ -95,6 +95,8 @@ func (s *ServerGateway) Start(addrs string) error {
 	s.server = &http.Server{}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/update/", s.Update)
+	mux.HandleFunc("/register/", s.Register)
+	mux.HandleFunc("/unregister/", s.Unregister)
 	s.server.Handler = mux
 
 	s.starter.Start()
@@ -145,6 +147,18 @@ func (s *ServerGateway) Register(w http.ResponseWriter, r *http.Request) {
 
 	s.starter.Register(service, registerMsg.Repository,
 		registerMsg.NotifyUrl, registerMsg.CurrentVersion)
+}
+
+
+// Unregister unregisters a service from updater, which will stop looking for new versions
+// URI: /register/:service_name
+// Method: POST
+func (s *ServerGateway) Unregister(w http.ResponseWriter, r *http.Request) {
+	service := retrieveServiceFromURL(r.URL)
+
+	s.starter.Unregister(service)
+
+	writeJSON(w, http.StatusOK, HTTPResponse{Data: service + " unregistered"})
 }
 
 // retrievePkFromURL returns the id used on endpoints of the form path/:pk

@@ -1,9 +1,12 @@
+scripts_directory: "/Users/ivan/Desktop/skycoin/pkg/github.com/watercompany/skywire-services/updater/pkg/updater/scripts/"
+
 active_update_checkers:
   naive:
     interval: "30s"
     retries: 3
     retry_time: "22s"
     kind: "naive"
+    notify_url: "http://localhost:8989/update"
 
 updaters:
   custom:
@@ -13,7 +16,7 @@ services:
   skywire-manager:
     official_name: "skywire-manager"
     local_name: "manager"
-    update_script: "/Users/ivan/Desktop/skycoin/pkg/github.com/watercompany/skywire-services/updater/pkg/updater/scripts/skywire.sh"
+    update_script: "skywire.sh"
     script_interpreter: "/bin/bash"
     script_timeout: "20m"
     script_extra_arguments:
@@ -25,7 +28,7 @@ services:
   skywire-node:
     official_name: "skywire-node"
     local_name: "node"
-    update_script: "/Users/ivan/Desktop/skycoin/pkg/github.com/watercompany/skywire-services/updater/pkg/updater/scripts/skywire.sh"
+    update_script: "skywire.sh"
     script_interpreter: "/bin/bash"
     script_timeout: "20m"
     script_extra_arguments:

@@ -15,6 +15,7 @@ import (
 	"github.com/skycoin/skycoin/src/util/logging"
 	"sync"
 	"fmt"
+	"path/filepath"
 )
 
 var (
@@ -24,8 +25,10 @@ var (
 
 var defaultSubscriptorConfig = struct {
 	kind string
+	interval time.Duration
 }{
 	kind: "naive",
+	interval: 20 * time.Second,
 }
 
 type Supervisor struct {
@@ -34,11 +37,25 @@ type Supervisor struct {
 	updaters        map[string]updater.Updater
 	defaultFetcherConfig active.Fetcher
 	defaultService updater.Updater
-	config config.Configuration
+	config *config.Configuration
 	sync.RWMutex
 }
 
-func New(conf config.Configuration) *Supervisor {
+func (s *Supervisor) registerChecker(service string, checker active.Fetcher) {
+	s.Lock()
+	defer s.Unlock()
+
+	s.activeCheckers[fmt.Sprintf("%s-checker",service)] = checker
+}
+
+func (s *Supervisor) deregisterChecker(service string) {
+	s.Lock()
+	defer s.Unlock()
+
+	delete(s.activeCheckers, fmt.Sprintf("%s-checker",service))
+}
+
+func New(conf *config.Configuration) *Supervisor {
 	s := &Supervisor{
 		activeCheckers:  map[string]active.Fetcher{},
 		passiveCheckers: map[string]passive.Subscriber{},
@@ -55,13 +72,31 @@ func New(conf config.Configuration) *Supervisor {
 }
 
 func (s *Supervisor) Register(service, url, notifyUrl, version string) {
-	s.Lock()
-	defer s.Unlock()
 	checker := active.New(defaultSubscriptorConfig.kind,
 		service, url, notifyUrl, loggerPkg.NewLogger(service))
 
-	s.activeCheckers[fmt.Sprintf("%s-checker",service)] = checker
+	s.registerChecker(service, checker)
+
+	checker.SetInterval(defaultSubscriptorConfig.interval)
 	go checker.Start()
+
+	serviceConfig := config.ServiceConfig{
+		Repository: notifyUrl,
+		ScriptInterpreter: "/bin/bash",
+		LocalName: service,
+		OfficialName: service,
+		ScriptExtraArguments: []string{service, url},
+		UpdateScript: filepath.Join(s.config.ScriptsDirectory, service + ".sh"),
+		ScriptTimeout: "6m",
+		Updater: "default",
+		CheckTag: "master",
+	}
+
+	s.config.SubscribeService(service, serviceConfig)
+}
+
+func (s *Supervisor) Unregister(service string) {
+	s.deregisterChecker(service)
 }
 
 func (s *Supervisor) Start() {
@@ -93,24 +128,27 @@ func (s *Supervisor) Update(service string) error {
 		return ErrServiceNotFound
 	}
 
-	updater := s.updaters[serviceConfig.Updater]
+	updaterInstance := s.updaters[serviceConfig.Updater]
 
 	// Try update
-	err := <- updater.Update(service, serviceConfig.CheckTag, loggerPkg.NewLogger(service))
+	err := <- updaterInstance.Update(service, serviceConfig.CheckTag, loggerPkg.NewLogger(service))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Supervisor) createUpdaters(conf config.Configuration) {
+func (s *Supervisor) createUpdaters(conf *config.Configuration) {
+	defaultUpdater := updater.New("custom", conf)
+	s.updaters["default"] = defaultUpdater
+
 	for name, c := range conf.Updaters {
 		u := updater.New(c.Kind, conf)
 		s.updaters[name] = u
 	}
 }
 
-func (s *Supervisor) createCheckers(conf config.Configuration) {
+func (s *Supervisor) createCheckers(conf *config.Configuration) {
 	for name, c := range conf.Services {
 		if c.ActiveUpdateChecker != "" {
 			s.registerActiveChecker(conf, c, name)
@@ -120,7 +158,7 @@ func (s *Supervisor) createCheckers(conf config.Configuration) {
 	}
 }
 
-func (s *Supervisor) registerPassiveChecker(conf config.Configuration, c config.ServiceConfig, name string) {
+func (s *Supervisor) registerPassiveChecker(conf *config.Configuration, c config.ServiceConfig, name string) {
 	passiveConfig, ok := conf.PassiveUpdateCheckers[c.PassiveUpdateChecker]
 	if !ok {
 		logrus.Fatalf("%s checker not defined for service %s",
@@ -132,7 +170,7 @@ func (s *Supervisor) registerPassiveChecker(conf config.Configuration, c config.
 	sub.Subscribe(passiveConfig.Topic)
 }
 
-func (s *Supervisor) registerActiveChecker(conf config.Configuration, c config.ServiceConfig, name string) {
+func (s *Supervisor) registerActiveChecker(conf *config.Configuration, c config.ServiceConfig, name string) {
 	activeConfig, ok := conf.ActiveUpdateCheckers[c.ActiveUpdateChecker]
 	if !ok {
 		logrus.Fatalf("%s checker not defined for service %s",

@@ -9,6 +9,7 @@ import (
 
 	"github.com/watercompany/skywire-services/updater/config"
 	"github.com/watercompany/skywire-services/updater/pkg/logger"
+	"path/filepath"
 )
 
 // This package implements a custom updater. This means, a script that would be launched upon
@@ -30,7 +31,7 @@ type customServiceConfig struct {
 	scriptTimeout        time.Duration
 }
 
-func newCustomUpdater(services map[string]config.ServiceConfig) *Custom {
+func newCustomUpdater(scriptsDirectory string, services map[string]config.ServiceConfig) *Custom {
 	customServices := make(map[string]customServiceConfig)
 	for officialName, c := range services {
 		duration, err := time.ParseDuration(c.ScriptTimeout)
@@ -47,7 +48,7 @@ func newCustomUpdater(services map[string]config.ServiceConfig) *Custom {
 			scriptInterpreter:    c.ScriptInterpreter,
 			scriptTimeout:        duration,
 			tag:                  c.CheckTag,
-			updateScript:         c.UpdateScript,
+			updateScript:         filepath.Join(scriptsDirectory, c.UpdateScript),
 		}
 	}
 

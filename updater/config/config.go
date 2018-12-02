@@ -15,6 +15,7 @@ var (
 )
 
 type Configuration struct {
+	ScriptsDirectory string `yaml:"scripts_directory"`
 	Port				  uint16 `yaml:"port"`
 	Updaters              map[string]UpdaterConfig    `yaml:"updaters"`
 	ActiveUpdateCheckers  map[string]FetcherConfig    `yaml:"active_update_checkers"`
@@ -56,15 +57,15 @@ type ServiceConfig struct {
 	Repository           string   `yaml:"repository"`
 }
 
-func New() Configuration {
-	return Configuration{
+func New() *Configuration {
+	return &Configuration{
 		ActiveUpdateCheckers:  make(map[string]FetcherConfig),
 		PassiveUpdateCheckers: make(map[string]SubscriberConfig),
 		Services:              make(map[string]ServiceConfig),
 	}
 }
 
-func NewFromFile(path string) Configuration {
+func NewFromFile(path string) *Configuration {
 	confPath := defaultPathIfNil(path)
 
 	b, err := ioutil.ReadFile(confPath)
@@ -72,7 +73,7 @@ func NewFromFile(path string) Configuration {
 		panic(err)
 	}
 
-	conf := Configuration{
+	conf := &Configuration{
 		ActiveUpdateCheckers:  make(map[string]FetcherConfig),
 		PassiveUpdateCheckers: make(map[string]SubscriberConfig),
 		Services:              make(map[string]ServiceConfig),
