@@ -100,7 +100,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 }
 
 func (c *Client) getNextNonce(ctx context.Context, key cipher.PubKey) (store.Nonce, error) {
-	resp, err := c.client.Get(c.addr + "/incrementing-nonce/" + key.Hex())
+	resp, err := c.client.Get(c.addr + "/incrementing-nonces/" + key.Hex())
 	if err != nil {
 		return 0, err
 	}

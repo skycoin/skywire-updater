@@ -45,7 +45,7 @@ func TestClientAuth(t *testing.T) {
 				assert.Equal(t, "1", r.Header.Get("SW-Nonce"))
 				assert.NotEmpty(t, r.Header.Get("SW-Sig")) // TODO: check for the right key
 
-			case "/incrementing-nonce/" + testPubKey.Hex():
+			case "/incrementing-nonces/" + testPubKey.Hex():
 				fmt.Fprintf(w, `{"edge": "%s", "next_nonce": 1}`, testPubKey.Hex())
 
 			default:
