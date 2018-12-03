@@ -15,7 +15,6 @@ import (
 	"github.com/skycoin/skycoin/src/util/logging"
 	"sync"
 	"fmt"
-	"path/filepath"
 )
 
 var (
@@ -48,7 +47,7 @@ func (s *Supervisor) registerChecker(service string, checker active.Fetcher) {
 	s.activeCheckers[fmt.Sprintf("%s-checker",service)] = checker
 }
 
-func (s *Supervisor) deregisterChecker(service string) {
+func (s *Supervisor) unregisterChecker(service string) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -86,17 +85,25 @@ func (s *Supervisor) Register(service, url, notifyUrl, version string) {
 		LocalName: service,
 		OfficialName: service,
 		ScriptExtraArguments: []string{service, url},
-		UpdateScript: filepath.Join(s.config.ScriptsDirectory, service + ".sh"),
+		UpdateScript: "generic-service.sh",
 		ScriptTimeout: "6m",
 		Updater: "default",
 		CheckTag: "master",
 	}
 
+	s.updaters["default"].RegisterService(serviceConfig, service, s.config.ScriptsDirectory)
 	s.config.SubscribeService(service, serviceConfig)
 }
 
-func (s *Supervisor) Unregister(service string) {
-	s.deregisterChecker(service)
+func (s *Supervisor) Unregister(service string) error {
+	s.unregisterChecker(service)
+	serviceConfig, ok := s.config.Services[service]
+	if !ok {
+		return ErrServiceNotFound
+	}
+
+	s.updaters[serviceConfig.Updater].UnregisterService(service)
+	return nil
 }
 
 func (s *Supervisor) Start() {
@@ -120,7 +127,9 @@ func (s *Supervisor) Stop() {
 }
 
 func (s *Supervisor) Update(service string) error {
-	logger.Infof("%+v\n",s.config.Services)
+	logger.Infof("services: %+v\n",s.config.Services)
+
+	logger.Infof("updaters: %+v\n", s.updaters)
 
 	// get updater
 	serviceConfig, ok := s.config.Services[service]

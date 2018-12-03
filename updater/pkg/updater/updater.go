@@ -11,6 +11,8 @@ import (
 
 type Updater interface {
 	Update(service, version string, log *logger.Logger) chan error
+	RegisterService(conf config.ServiceConfig, officialName, scriptsDirectory string)
+ 	UnregisterService(officialName string)
 }
 
 func New(kind string, conf *config.Configuration) Updater {

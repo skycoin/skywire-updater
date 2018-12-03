@@ -10,6 +10,8 @@ import (
 	"github.com/watercompany/skywire-services/updater/config"
 	"github.com/watercompany/skywire-services/updater/pkg/logger"
 	"path/filepath"
+	"sync"
+	"errors"
 )
 
 // This package implements a custom updater. This means, a script that would be launched upon
@@ -17,8 +19,11 @@ import (
 
 var defaultScriptTimeout = time.Minute * 10
 
+var ErrNoServiceWithThatName = errors.New("no service registered with that name")
+
 type Custom struct {
 	services map[string]customServiceConfig
+	sync.RWMutex
 }
 
 type customServiceConfig struct {
@@ -33,23 +38,10 @@ type customServiceConfig struct {
 
 func newCustomUpdater(scriptsDirectory string, services map[string]config.ServiceConfig) *Custom {
 	customServices := make(map[string]customServiceConfig)
-	for officialName, c := range services {
-		duration, err := time.ParseDuration(c.ScriptTimeout)
-		if err != nil {
-			duration = defaultScriptTimeout
-			logrus.Warnf("cannot parse timeout duration %s of service %s configuration."+
-				" setting default timeout %s", c.ScriptTimeout, c.OfficialName, duration.String())
-		}
+	custom := &Custom{ services: customServices}
 
-		customServices[officialName] = customServiceConfig{
-			officialName:         officialName,
-			localName:            c.LocalName,
-			scriptExtraArguments: c.ScriptExtraArguments,
-			scriptInterpreter:    c.ScriptInterpreter,
-			scriptTimeout:        duration,
-			tag:                  c.CheckTag,
-			updateScript:         filepath.Join(scriptsDirectory, c.UpdateScript),
-		}
+	for officialName, c := range services {
+		custom.RegisterService(c, officialName, scriptsDirectory)
 	}
 
 	return &Custom{
@@ -57,9 +49,53 @@ func newCustomUpdater(scriptsDirectory string, services map[string]config.Servic
 	}
 }
 
+func (c *Custom) RegisterService(conf config.ServiceConfig, officialName, scriptsDirectory string) {
+	c.Lock()
+	defer c.Unlock()
+
+	customService := c.parseServiceConfig(conf, officialName, scriptsDirectory)
+	c.services[officialName] = customService
+}
+
+func (c *Custom) UnregisterService(officialName string) {
+	c.Lock()
+	defer c.Unlock()
+
+	delete(c.services, officialName)
+}
+
+func (c *Custom) service(officialName string) (customServiceConfig, bool) {
+	c.RLock()
+	defer c.RUnlock()
+
+	serviceConfig, ok := c.services[officialName]
+	return serviceConfig, ok
+}
+
+func (c *Custom) parseServiceConfig(conf config.ServiceConfig, officialName, scriptsDirectory string) customServiceConfig {
+	duration, err := time.ParseDuration(conf.ScriptTimeout)
+	if err != nil {
+		duration = defaultScriptTimeout
+		logrus.Warnf("cannot parse timeout duration %s of service %s configuration."+
+			" setting default timeout %s", conf.ScriptTimeout, conf.OfficialName, duration.String())
+	}
+	return customServiceConfig{
+		officialName:         officialName,
+		localName:            conf.LocalName,
+		scriptExtraArguments: conf.ScriptExtraArguments,
+		scriptInterpreter:    conf.ScriptInterpreter,
+		scriptTimeout:        duration,
+		tag:                  conf.CheckTag,
+		updateScript:         filepath.Join(scriptsDirectory, conf.UpdateScript),
+	}
+}
+
 func (c *Custom) Update(service, version string, log *logger.Logger) chan error {
 	errCh := make(chan error)
-	localService := c.services[service]
+	localService, ok := c.service(service)
+	if !ok {
+
+	}
 
 	customCmd, statusChan := createAndLaunch(localService, version, log)
 	ticker := time.NewTicker(time.Second * 2)

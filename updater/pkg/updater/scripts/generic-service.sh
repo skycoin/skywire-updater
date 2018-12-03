@@ -1,8 +1,10 @@
 #!/bin/bash
 # We hardcode the service and just care about the version
 process_name=$1
-service_github_url=$2
-shift 2
+version=$2
+official_name=$3
+service_github_url=$4
+shift 4
 arguments=$@
 parsed_args=$(eval echo ${arguments})
 

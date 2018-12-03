@@ -1,4 +1,4 @@
-scripts_directory: "/Users/ivan/Desktop/skycoin/pkg/github.com/watercompany/skywire-services/updater/pkg/updater/scripts/"
+scripts_directory: "/Users/ivan/Desktop/skycoin/src/github.com/watercompany/skywire-services/updater/pkg/updater/scripts/"
 
 active_update_checkers:
   naive:
