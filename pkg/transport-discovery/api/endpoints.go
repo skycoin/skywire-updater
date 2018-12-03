@@ -22,7 +22,7 @@ func (api *API) handleRegister(w http.ResponseWriter, r *http.Request) (interfac
 	}
 
 	w.WriteHeader(201)
-	return t, nil
+	return NewTransportResponse(t), nil
 }
 
 func (api *API) handleTransports(w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -39,14 +39,21 @@ func (api *API) handleTransports(w http.ResponseWriter, r *http.Request) (interf
 	case "GET":
 		return api.store.GetTransportByID(r.Context(), store.ID(id))
 	case "DELETE":
-		return api.store.DeregisterTransport(r.Context(), store.ID(id))
+		t, err := api.store.DeregisterTransport(r.Context(), store.ID(id))
+		if err != nil {
+			return nil, err
+		}
+
+		resp := DeletedTransportsResponse{
+			Deleted: []TransportResponse{
+				NewTransportResponse(*t),
+			},
+		}
+
+		return resp, nil
 	}
 
 	return nil, errors.New("Invalid HTTP Method")
-}
-
-func (api *API) handleDeregister(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	panic("not implemented")
 }
 
 func (api *API) handleIncrementingNonces(w http.ResponseWriter, r *http.Request) (interface{}, error) {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -16,6 +17,16 @@ import (
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/mockstore"
 )
+
+func newTestTransport() *store.Transport {
+	pk1, _ := cipher.GenerateKeyPair()
+	pk2, _ := cipher.GenerateKeyPair()
+	return &store.Transport{
+		ID:         0xff,
+		Edges:      []cipher.PubKey{pk1, pk2},
+		Registered: time.Now(),
+	}
+}
 
 func TestBadRequest(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -35,15 +46,7 @@ func TestPOSTRegisterTransport(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	now := time.Now()
-	pk1, _ := cipher.GenerateKeyPair()
-	pk2, _ := cipher.GenerateKeyPair()
-	trans := store.Transport{
-		ID:         0xff,
-		Edges:      []cipher.PubKey{pk1, pk2},
-		Registered: now,
-	}
-
+	trans := newTestTransport()
 	mock := mockstore.NewMockStore(ctrl)
 	mock.EXPECT().RegisterTransport(gomock.Any(), gomock.Any()).Return(nil)
 
@@ -73,18 +76,49 @@ func TestGETTransportByID(t *testing.T) {
 
 	ctx := context.Background()
 
-	mock.EXPECT().GetTransportByID(ctx, store.ID(1))
+	expected := newTestTransport()
+	mock.EXPECT().GetTransportByID(ctx, expected.ID).
+		Return(expected, nil)
 
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest("GET", "/ids/1", nil)
+	r := httptest.NewRequest("GET", fmt.Sprintf("/ids/%d", expected.ID), nil)
 	api.ServeHTTP(w, r)
 	require.Equal(t, 200, w.Code, w.Body.String())
 
-	t.Skip("Missing Response verification")
+	var resp *store.Transport
+	require.NoError(t,
+		json.Unmarshal(w.Body.Bytes(), &resp),
+	)
+
+	assert.Equal(t, expected.ID, resp.ID)
+	assert.Equal(t, expected.Edges, resp.Edges)
+	assert.Equal(t, expected.Registered.Unix(), resp.Registered.Unix())
 }
 
 func TestDELETETransportByID(t *testing.T) {
-	t.Skip("Not Implemented")
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mock := mockstore.NewMockStore(ctrl)
+
+	expected := newTestTransport()
+	api := New(mock, APIOptions{DisableSigVerify: true})
+	mock.EXPECT().DeregisterTransport(gomock.Any(), store.ID(1)).Return(expected, nil)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("DELETE", fmt.Sprintf("/ids/%d", 1), nil)
+	api.ServeHTTP(w, r)
+	require.Equal(t, 200, w.Code, w.Body.String())
+
+	var resp DeletedTransportsResponse
+	require.NoError(t,
+		json.Unmarshal(w.Body.Bytes(), &resp),
+		w.Body.String(),
+	)
+
+	got := NewTransportResponse(*expected)
+	require.Len(t, resp.Deleted, 1)
+
+	assert.Equal(t, resp.Deleted[0].ID, got.ID)
 }
 
 func TestGETIncrementingNonces(t *testing.T) {

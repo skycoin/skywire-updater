@@ -34,7 +34,6 @@ func New(s store.Store, opts APIOptions) *API {
 
 	mux.Handle("/register", api.withSigVer(apiHandler(api.handleRegister)))
 	mux.Handle("/ids/", api.withSigVer(apiHandler(api.handleTransports)))
-	mux.Handle("/deregister", api.withSigVer(apiHandler(api.handleDeregister)))
 	mux.Handle("/incrementing-nonces/", apiHandler(api.handleIncrementingNonces))
 
 	return api
