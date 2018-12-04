@@ -40,8 +40,8 @@ func (s *TransportSuite) TestRegister() {
 		require.NoError(t, s.Store.RegisterTransport(ctx, tr1))
 	}()
 
-	// Simulate 1 second delay between both nodes
-	time.Sleep(time.Second)
+	// Simulate some delay between both nodes
+	time.Sleep(100 * time.Millisecond)
 
 	// This goroutine represent the second node registering a transport
 	wg.Add(1)
@@ -59,7 +59,7 @@ func (s *TransportSuite) TestRegister() {
 		assert.True(t, time.Now().After(tr1.Registered))
 	})
 
-	t.Run("Transport should be found", func(t *testing.T) {
+	t.Run(".GetTransportByID", func(t *testing.T) {
 		found, err := s.Store.GetTransportByID(ctx, tr1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, tr1.ID, found.ID, "IDs should be equal")
@@ -68,7 +68,28 @@ func (s *TransportSuite) TestRegister() {
 		assert.Equal(t, tr1.Registered, found.Registered)
 	})
 
-	t.Run("Transport should be deleted", func(t *testing.T) {
+	t.Run(".GetTransportsByEdge", func(t *testing.T) {
+		var err error
+		var transports []*store.Transport
+
+		transports, err = s.Store.GetTransportsByEdge(ctx, pk1)
+		require.NoError(t, err)
+		assert.Len(t, transports, 1)
+		assert.Contains(t, transports[0].Edges, pk1)
+
+		transports, err = s.Store.GetTransportsByEdge(ctx, pk2)
+		require.NoError(t, err)
+		assert.Len(t, transports, 1)
+		assert.Contains(t, transports[0].Edges, pk2)
+
+		pk, _ := cipher.GenerateKeyPair()
+		transports, err = s.Store.GetTransportsByEdge(ctx, pk)
+		require.NoError(t, err)
+		assert.Len(t, transports, 0)
+	})
+
+	t.Run(".DeregisterTransport", func(t *testing.T) {
+		return
 		trans, err := s.Store.DeregisterTransport(ctx, tr1.ID)
 		require.NoError(t, err)
 		assert.Equal(t, tr1, trans)

@@ -14,6 +14,26 @@ type Store struct {
 	db *sql.DB
 }
 
+type Edges []cipher.PubKey
+
+func (e *Edges) Scan(value interface{}) error {
+	var edges []string
+	if err := pq.Array(&edges).Scan(value); err != nil {
+		return err
+	}
+
+	for _, hex := range edges {
+		pk, err := cipher.PubKeyFromHex(hex)
+		if err != nil {
+			return err
+		}
+
+		*e = append(*e, pk)
+	}
+
+	return nil
+}
+
 func NewStore(dsn string) (*Store, error) {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -150,7 +170,28 @@ func (s *Store) GetTransportByID(ctx context.Context, id store.ID) (*store.Trans
 }
 
 func (s *Store) GetTransportsByEdge(ctx context.Context, edge cipher.PubKey) ([]*store.Transport, error) {
-	panic("not implemented")
+	var query = ` SELECT id, edges, registered FROM transports WHERE edges @> ARRAY[$1]::VARCHAR(66)[]`
+	rows, err := s.db.QueryContext(ctx, query, edge.Hex())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ts []*store.Transport
+	for rows.Next() {
+		var t store.Transport
+		var edges = Edges{}
+
+		if err := rows.Scan(&t.ID, &edges, &t.Registered); err != nil {
+			return nil, err
+		}
+
+		t.Edges = edges
+
+		ts = append(ts, &t)
+	}
+
+	return ts, nil
 }
 
 func (s *Store) DeregisterTransport(ctx context.Context, id store.ID) (*store.Transport, error) {
