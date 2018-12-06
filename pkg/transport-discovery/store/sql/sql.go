@@ -130,9 +130,6 @@ func (s *Store) GetTransportByID(ctx context.Context, id store.ID) (*store.Trans
 
 		query = `SELECT edges, registered FROM transports WHERE id = $1`
 		if err := tx.QueryRowContext(ctx, query, id).Scan(pq.Array(&edges), &t.Registered); err != nil {
-			if err == sql.ErrNoRows {
-				return nil
-			}
 			return err
 		}
 

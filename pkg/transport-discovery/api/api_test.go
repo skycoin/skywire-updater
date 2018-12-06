@@ -24,7 +24,7 @@ func newTestTransport() *store.Transport {
 	return &store.Transport{
 		ID:         0xff,
 		Edges:      []cipher.PubKey{pk1, pk2},
-		Registered: time.Now(),
+		Registered: time.Now().Add(1 * time.Minute),
 	}
 }
 
@@ -62,9 +62,11 @@ func TestPOSTRegisterTransport(t *testing.T) {
 
 	var resp TransportResponse
 	json.NewDecoder(bytes.NewBuffer(w.Body.Bytes())).Decode(&resp)
-	assert.Equal(t, trans.ID, resp.ID)
-	assert.Equal(t, trans.Edges, resp.Edges)
-	assert.Equal(t, trans.Registered.Unix(), resp.Registered)
+
+	m := resp.Model()
+	assert.Equal(t, trans.ID, m.ID)
+	assert.Equal(t, trans.Edges, m.Edges)
+	assert.Equal(t, trans.Registered.Unix(), m.Registered.Unix())
 }
 
 func TestGETTransportByID(t *testing.T) {
@@ -85,14 +87,15 @@ func TestGETTransportByID(t *testing.T) {
 	api.ServeHTTP(w, r)
 	require.Equal(t, 200, w.Code, w.Body.String())
 
-	var resp *store.Transport
+	var resp TransportResponse
 	require.NoError(t,
 		json.Unmarshal(w.Body.Bytes(), &resp),
 	)
 
-	assert.Equal(t, expected.ID, resp.ID)
-	assert.Equal(t, expected.Edges, resp.Edges)
-	assert.Equal(t, expected.Registered.Unix(), resp.Registered.Unix())
+	m := resp.Model()
+	assert.Equal(t, expected.ID, m.ID)
+	assert.Equal(t, expected.Edges, m.Edges)
+	assert.Equal(t, expected.Registered.Unix(), m.Registered.Unix())
 }
 
 func TestDELETETransportByID(t *testing.T) {

@@ -19,7 +19,7 @@ var testPubKey, testSec = cipher.GenerateKeyPair()
 
 // validHeaders returns a valid set of headers
 func validHeaders(t *testing.T, payload []byte) http.Header {
-	nonce := store.Nonce(1)
+	nonce := store.Nonce(0)
 	sig, err := auth.Sign(payload, nonce, testSec)
 	require.NoError(t, err)
 
@@ -41,7 +41,7 @@ func TestAuthFromHeaders(t *testing.T) {
 
 	t.Run("Valid", func(t *testing.T) {
 		mock.EXPECT().IncrementNonce(gomock.Any(), gomock.Any()).AnyTimes()
-		mock.EXPECT().GetNonce(ctx, testPubKey).Return(store.Nonce(1), nil)
+		mock.EXPECT().GetNonce(ctx, testPubKey).Return(store.Nonce(0), nil)
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("POST", "/register", nil)

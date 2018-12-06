@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"net/http"
@@ -35,6 +36,9 @@ var serve = cli.Command{
 			return err
 		}
 		defer tdb.Close()
+		if err := tdb.Migrate(context.Background()); err != nil {
+			return err
+		}
 
 		ndb := memory.NewStore()
 

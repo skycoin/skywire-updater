@@ -37,7 +37,11 @@ func (api *API) handleTransports(w http.ResponseWriter, r *http.Request) (interf
 
 	switch r.Method {
 	case "GET":
-		return api.store.GetTransportByID(r.Context(), store.ID(id))
+		t, err := api.store.GetTransportByID(r.Context(), store.ID(id))
+		if err != nil {
+			return nil, err
+		}
+		return NewTransportResponse(*t), nil
 	case "DELETE":
 		t, err := api.store.DeregisterTransport(r.Context(), store.ID(id))
 		if err != nil {
@@ -45,7 +49,7 @@ func (api *API) handleTransports(w http.ResponseWriter, r *http.Request) (interf
 		}
 
 		resp := DeletedTransportsResponse{
-			Deleted: []TransportResponse{
+			Deleted: []*TransportResponse{
 				NewTransportResponse(*t),
 			},
 		}
