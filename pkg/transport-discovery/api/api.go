@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -65,6 +66,8 @@ func (fn apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch err {
 		case ErrEmptyPubKey, ErrEmptyTransportID, cipher.ErrInvalidPubKey:
 			status = 400
+		case context.DeadlineExceeded:
+			status = 408
 		}
 
 		// we still haven't found the error

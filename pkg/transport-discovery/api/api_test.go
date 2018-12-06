@@ -69,6 +69,33 @@ func TestPOSTRegisterTransport(t *testing.T) {
 	assert.Equal(t, trans.Registered.Unix(), m.Registered.Unix())
 }
 
+func TestRegisterTimeout(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	timeout := 10 * time.Millisecond
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	mock := mockstore.NewMockStore(ctrl)
+	api := New(mock, APIOptions{DisableSigVerify: true})
+
+	// after this ctx's deadline will be exceeded
+	time.Sleep(timeout * 2)
+
+	mock.EXPECT().
+		RegisterTransport(ctx, gomock.Any()).
+		AnyTimes().
+		Return(ctx.Err())
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/register", bytes.NewBufferString("{}"))
+
+	api.ServeHTTP(w, r.WithContext(ctx))
+
+	require.Equal(t, 408, w.Code, w.Body.String())
+}
+
 func TestGETTransportByID(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
