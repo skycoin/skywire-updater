@@ -1,4 +1,8 @@
 pipeline:
+  lint: ## Run linters. Use make install-linters first.
+    - make install-linters
+    - make lint
+
   wait_for_postgres:
     image: postgres
     commands:
