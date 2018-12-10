@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/skycoin/skycoin/src/cipher"
+	"github.com/watercompany/skywire-services/pkg/transport-discovery/api"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
@@ -117,17 +118,12 @@ func (c *Client) getNextNonce(ctx context.Context, key cipher.PubKey) (store.Non
 		return 0, fmt.Errorf("error getting current nonce: status: %d <- %s", resp.StatusCode, string(body))
 	}
 
-	// TODO: Move this to ./store
-	var v struct {
-		Edge      string `json:"edge"`
-		NextNonce uint64 `json:"next_nonce"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
+	var nr api.NonceResponse
+	if err := json.NewDecoder(resp.Body).Decode(&nr); err != nil {
 		return 0, err
 	}
 
-	return store.Nonce(v.NextNonce), nil
+	return store.Nonce(nr.NextNonce), nil
 }
 
 func (c *Client) RegisterTransport(ctx context.Context, t *store.Transport) error {
