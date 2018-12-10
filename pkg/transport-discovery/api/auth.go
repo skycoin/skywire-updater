@@ -23,31 +23,30 @@ type Auth struct {
 
 func authFromHeaders(hdr http.Header) (*Auth, error) {
 	a := &Auth{}
-	if v := hdr.Get("SW-Public"); v == "" {
-		return nil, errors.New("SW-Public missing")
-	} else {
-		key, err := cipher.PubKeyFromHex(v)
-		if err != nil {
-			return nil, fmt.Errorf("Error parsing SW-Public: %s", err.Error())
-		}
-		a.Key = key
-	}
+	var v string
 
-	if v := hdr.Get("SW-Sig"); v == "" {
-		return nil, errors.New("SW-Sig missing")
-	} else {
-		sig, err := cipher.SigFromHex(v)
-		if err != nil {
-			return nil, fmt.Errorf("Error parsing SW-Sig:'%s': %s", v, err.Error())
-		}
-		a.Sig = sig
+	if v = hdr.Get("SW-Public"); v == "" {
+		return nil, errors.New("SW-Public missing")
 	}
+	key, err := cipher.PubKeyFromHex(v)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing SW-Public: %s", err.Error())
+	}
+	a.Key = key
+
+	if v = hdr.Get("SW-Sig"); v == "" {
+		return nil, errors.New("SW-Sig missing")
+	}
+	sig, err := cipher.SigFromHex(v)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing SW-Sig:'%s': %s", v, err.Error())
+	}
+	a.Sig = sig
 
 	nonceStr := hdr.Get("SW-Nonce")
 	if nonceStr == "" {
 		return nil, errors.New("SW-Nonce missing")
 	}
-
 	nonceUint, err := strconv.ParseUint(nonceStr, 10, 64)
 	if err != nil {
 		if numErr, ok := err.(*strconv.NumError); ok {
@@ -57,6 +56,7 @@ func authFromHeaders(hdr http.Header) (*Auth, error) {
 		return nil, fmt.Errorf("Error parsing SW-Nonce: %s", err.Error())
 	}
 	a.Nonce = store.Nonce(nonceUint)
+
 	return a, nil
 }
 
