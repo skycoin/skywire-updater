@@ -73,18 +73,18 @@ func TestRegisterTransport(t *testing.T) {
 		assert  func(err error)
 	}{
 		{
-			"Status201",
-			func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(201) },
+			"StatusCreated",
+			func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusCreated) },
 			func(err error) { require.NoError(t, err) },
 		},
 		{
-			"Status200",
-			func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) },
+			"StatusOK",
+			func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) },
 			func(err error) { require.Error(t, err) },
 		},
 		{
-			"Status500",
-			func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(500) },
+			"StatusInternalServerError",
+			func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusInternalServerError) },
 			func(err error) { require.Error(t, err) },
 		},
 		{

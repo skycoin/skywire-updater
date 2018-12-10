@@ -106,7 +106,7 @@ func (c *Client) getNextNonce(ctx context.Context, key cipher.PubKey) (store.Non
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return 0, err
@@ -135,7 +135,7 @@ func (c *Client) RegisterTransport(ctx context.Context, t *store.Transport) erro
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 201 {
+	if resp.StatusCode == http.StatusCreated {
 		return nil
 	}
 

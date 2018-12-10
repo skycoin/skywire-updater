@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -39,7 +40,7 @@ func TestBadRequest(t *testing.T) {
 
 	api.ServeHTTP(w, r)
 
-	assert.Equal(t, 400, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestPOSTRegisterTransport(t *testing.T) {
@@ -58,7 +59,7 @@ func TestPOSTRegisterTransport(t *testing.T) {
 	r := httptest.NewRequest("POST", "/register", post)
 	api.ServeHTTP(w, r)
 
-	assert.Equal(t, 201, w.Code, w.Body.String())
+	assert.Equal(t, http.StatusCreated, w.Code, w.Body.String())
 
 	var resp TransportResponse
 	json.NewDecoder(bytes.NewBuffer(w.Body.Bytes())).Decode(&resp)
@@ -93,7 +94,7 @@ func TestRegisterTimeout(t *testing.T) {
 
 	api.ServeHTTP(w, r.WithContext(ctx))
 
-	require.Equal(t, 408, w.Code, w.Body.String())
+	require.Equal(t, http.StatusRequestTimeout, w.Code, w.Body.String())
 }
 
 func TestGETTransportByID(t *testing.T) {
@@ -112,7 +113,7 @@ func TestGETTransportByID(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", fmt.Sprintf("/ids/%d", expected.ID), nil)
 	api.ServeHTTP(w, r)
-	require.Equal(t, 200, w.Code, w.Body.String())
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 
 	var resp TransportResponse
 	require.NoError(t,
@@ -137,7 +138,7 @@ func TestDELETETransportByID(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("DELETE", fmt.Sprintf("/ids/%d", 1), nil)
 	api.ServeHTTP(w, r)
-	require.Equal(t, 200, w.Code, w.Body.String())
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 
 	var resp DeletedTransportsResponse
 	require.NoError(t,
@@ -168,7 +169,7 @@ func TestGETIncrementingNonces(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/incrementing-nonces/"+pubKey.Hex(), nil)
 		api.ServeHTTP(w, r.WithContext(ctx))
-		require.Equal(t, 200, w.Code, w.Body.String())
+		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 
 		var resp NonceResponse
 		err := json.Unmarshal(w.Body.Bytes(), &resp)
@@ -184,7 +185,7 @@ func TestGETIncrementingNonces(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/incrementing-nonces/"+pubKey.Hex(), nil)
 		api.ServeHTTP(w, r)
-		require.Equal(t, 500, w.Code, w.Body.String())
+		require.Equal(t, http.StatusInternalServerError, w.Code, w.Body.String())
 		assert.Contains(t, w.Body.String(), boom.Error())
 	})
 
@@ -192,7 +193,7 @@ func TestGETIncrementingNonces(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/incrementing-nonces/", nil)
 		api.ServeHTTP(w, r)
-		require.Equal(t, 400, w.Code, w.Body.String())
+		require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
 		assert.Contains(t, w.Body.String(), "empty")
 	})
 
@@ -200,7 +201,7 @@ func TestGETIncrementingNonces(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/incrementing-nonces/foo-bar", nil)
 		api.ServeHTTP(w, r)
-		require.Equal(t, 400, w.Code, w.Body.String())
+		require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
 		assert.Contains(t, w.Body.String(), "Invalid")
 	})
 }

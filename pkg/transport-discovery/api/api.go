@@ -65,22 +65,22 @@ func (fn apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		switch err {
 		case ErrEmptyPubKey, ErrEmptyTransportID, cipher.ErrInvalidPubKey:
-			status = 400
+			status = http.StatusBadRequest
 		case context.DeadlineExceeded:
-			status = 408
+			status = http.StatusRequestTimeout
 		}
 
 		// we still haven't found the error
 		if status == 0 {
 			switch err.(type) {
 			case *json.SyntaxError:
-				status = 400
+				status = http.StatusBadRequest
 			}
 		}
 
 		// we fallback to 500
 		if status == 0 {
-			status = 500
+			status = http.StatusInternalServerError
 		}
 
 		renderError(w, status, err)
@@ -95,19 +95,19 @@ func (api *API) withSigVer(next http.Handler) http.Handler {
 			ctx := r.Context()
 			auth, err := authFromHeaders(r.Header)
 			if err != nil {
-				renderError(w, 401, err)
+				renderError(w, http.StatusUnauthorized, err)
 				return
 			}
 
 			if err := api.VerifyAuth(r, auth); err != nil {
-				renderError(w, 401, err)
+				renderError(w, http.StatusUnauthorized, err)
 				return
 			}
 
 			if r.Method == "POST" && !auth.Key.Null() {
 				_, err := api.store.IncrementNonce(ctx, auth.Key)
 				if err != nil {
-					renderError(w, 500, err)
+					renderError(w, http.StatusInternalServerError, err)
 					return
 				}
 			}

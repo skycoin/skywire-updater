@@ -49,7 +49,7 @@ func TestAuthFromHeaders(t *testing.T) {
 
 		api.ServeHTTP(w, r)
 
-		assert.NotEqual(t, 401, w.Code, w.Body.String())
+		assert.NotEqual(t, http.StatusUnauthorized, w.Code, w.Body.String())
 	})
 }
 

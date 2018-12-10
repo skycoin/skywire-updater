@@ -21,7 +21,7 @@ func (api *API) handleRegister(w http.ResponseWriter, r *http.Request) (interfac
 		return nil, err
 	}
 
-	w.WriteHeader(201)
+	w.WriteHeader(http.StatusCreated)
 	return NewTransportResponse(t), nil
 }
 
