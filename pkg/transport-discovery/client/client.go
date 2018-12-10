@@ -70,31 +70,33 @@ func (c *Client) Post(ctx context.Context, path string, payload interface{}) (*h
 }
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	if !c.key.Null() {
-		req.Header.Add("SW-Public", c.key.Hex())
-		nonce, err := c.getNextNonce(req.Context(), c.key)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Add("SW-Nonce", strconv.FormatUint(uint64(nonce), 10))
-
-		body, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			return nil, err
-		}
-		req.Body.Close()
-		req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-
-		hash := cipher.SumSHA256([]byte(
-			fmt.Sprintf("%s%d", string(body), nonce),
-		))
-
-		sig, err := cipher.SignHash(hash, c.sec)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Add("SW-Sig", sig.Hex())
+	if c.key.Null() {
+		return c.client.Do(req)
 	}
+
+	req.Header.Add("SW-Public", c.key.Hex())
+	nonce, err := c.getNextNonce(req.Context(), c.key)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("SW-Nonce", strconv.FormatUint(uint64(nonce), 10))
+
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	req.Body.Close()
+	req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+
+	hash := cipher.SumSHA256([]byte(
+		fmt.Sprintf("%s%d", string(body), nonce),
+	))
+
+	sig, err := cipher.SignHash(hash, c.sec)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("SW-Sig", sig.Hex())
 
 	return c.client.Do(req)
 }
