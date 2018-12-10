@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/watercompany/skywire-services/pkg/transport-discovery/api"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
@@ -86,6 +88,30 @@ func TestRegisterTransport(t *testing.T) {
 			"StatusInternalServerError",
 			func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusInternalServerError) },
 			func(err error) { require.Error(t, err) },
+		},
+		{
+			"JSONError",
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(api.Error{Error: "boom"})
+			},
+			func(err error) {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "status: 500")
+				assert.Contains(t, err.Error(), "error: boom")
+			},
+		},
+		{
+			"NonJSONError",
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprintf(w, "boom")
+			},
+			func(err error) {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "status: 500")
+				assert.Contains(t, err.Error(), "error: boom")
+			},
 		},
 		{
 			"Request",

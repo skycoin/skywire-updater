@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -110,12 +112,7 @@ func (c *Client) getNextNonce(ctx context.Context, key cipher.PubKey) (store.Non
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return 0, err
-		}
-
-		return 0, fmt.Errorf("error getting current nonce: status: %d <- %s", resp.StatusCode, string(body))
+		return 0, fmt.Errorf("error getting current nonce: status: %d <- %v", resp.StatusCode, extractError(resp.Body))
 	}
 
 	var nr api.NonceResponse
@@ -137,14 +134,25 @@ func (c *Client) RegisterTransport(ctx context.Context, t *store.Transport) erro
 		return nil
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return fmt.Errorf("status: %d, error: %s", resp.StatusCode, string(body))
+	return fmt.Errorf("status: %d, error: %v", resp.StatusCode, extractError(resp.Body))
 }
 
 func (c *Client) DeregisterTransport(ctx context.Context, id store.ID) error {
 	return nil
+}
+
+// extractError returns the decoded error message from Body.
+func extractError(r io.Reader) error {
+	var apiError api.Error
+
+	body, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(body, &apiError); err != nil {
+		return errors.New(string(body))
+	}
+
+	return errors.New(apiError.Error)
 }
