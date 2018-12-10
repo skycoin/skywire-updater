@@ -60,33 +60,34 @@ func (fn apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Header.Set("Content-Type", "application/json")
 
 	res, err := fn(w, r)
-	if err != nil {
-		var status int
-
-		switch err {
-		case ErrEmptyPubKey, ErrEmptyTransportID, cipher.ErrInvalidPubKey:
-			status = http.StatusBadRequest
-		case context.DeadlineExceeded:
-			status = http.StatusRequestTimeout
-		}
-
-		// we still haven't found the error
-		if status == 0 {
-			switch err.(type) {
-			case *json.SyntaxError:
-				status = http.StatusBadRequest
-			}
-		}
-
-		// we fallback to 500
-		if status == 0 {
-			status = http.StatusInternalServerError
-		}
-
-		renderError(w, status, err)
+	if err == nil {
+		json.NewEncoder(w).Encode(res)
 		return
 	}
-	json.NewEncoder(w).Encode(res)
+
+	var status int
+
+	switch err {
+	case ErrEmptyPubKey, ErrEmptyTransportID, cipher.ErrInvalidPubKey:
+		status = http.StatusBadRequest
+	case context.DeadlineExceeded:
+		status = http.StatusRequestTimeout
+	}
+
+	// we still haven't found the error
+	if status == 0 {
+		switch err.(type) {
+		case *json.SyntaxError:
+			status = http.StatusBadRequest
+		}
+	}
+
+	// we fallback to 500
+	if status == 0 {
+		status = http.StatusInternalServerError
+	}
+
+	renderError(w, status, err)
 }
 
 func (api *API) withSigVer(next http.Handler) http.Handler {
