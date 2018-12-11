@@ -35,10 +35,7 @@ func (t *TransportResponse) Model() *store.Transport {
 	var edges []cipher.PubKey
 
 	for _, e := range t.Edges {
-		p, err := cipher.PubKeyFromHex(e)
-		if err == nil {
-			edges = append(edges, p)
-		}
+		edges = append(edges, cipher.MustPubKeyFromHex(e))
 	}
 
 	return &store.Transport{
