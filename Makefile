@@ -17,6 +17,6 @@ format: ## Formats the code. Must have goimports installed (use make install-lin
 
 test: ## Run tests for net
 	@mkdir -p coverage/
-	go test -coverpkg="github.com/watercompany/skywire-services/..." -coverprofile=coverage/go-test-cmd.coverage.out -timeout=5m ./...
+	go test -coverpkg="github.com/watercompany/skywire-services/..." -coverprofile=coverage/go-test-cmd.coverage.out -timeout=5m ./... -race
 	#go test -coverpkg="github.com/watercompany/skywire-messaging/..." -coverprofile=coverage/go-test-cmd.coverage.out -timeout=5m ./pkg/... -race
 	# race testing is taking around one minute and a half in my computer

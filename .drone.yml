@@ -20,7 +20,7 @@ pipeline:
     environment:
       - POSTGRES_TEST_DSN="database=test host=database user=postgres sslmode=disable"
     commands:
-      - go test ./... -race
+      - make test
 
 services:
   database:
