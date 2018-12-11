@@ -103,19 +103,21 @@ func (s *Store) RegisterTransport(ctx context.Context, t *store.Transport) error
 
 func (s *Store) waitForTransport(ctx context.Context, id store.ID, delay time.Duration) error {
 	for {
+		_, err := s.GetTransportByID(ctx, id)
+		// No Error means that transport was found; thus, created.
+		if err == nil {
+			return nil
+		}
+
+		// Any error different from these should be reported
+		if err != sql.ErrNoRows && err != store.ErrNotEnoughACKs {
+			return err
+		}
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(delay):
-			_, err := s.GetTransportByID(ctx, id)
-			if err != nil {
-				if err != sql.ErrNoRows {
-					return err
-				}
-
-				continue
-			}
-			return nil
 		}
 	}
 }
