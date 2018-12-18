@@ -27,10 +27,12 @@ func (api *API) handleRegister(w http.ResponseWriter, r *http.Request) (interfac
 
 func (api *API) handleTransports(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	split := strings.Split(r.URL.String(), "/")
-	if len(split) < 3 || split[2] == "" {
+	param := split[len(split)-1]
+
+	if param == "" {
 		return nil, ErrEmptyTransportID
 	}
-	id, err := strconv.ParseUint(split[2], 10, 64)
+	id, err := strconv.ParseUint(param, 10, 64)
 	if err != nil {
 		return nil, err
 	}
@@ -62,11 +64,12 @@ func (api *API) handleTransports(w http.ResponseWriter, r *http.Request) (interf
 
 func (api *API) handleIncrementingNonces(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	split := strings.Split(r.URL.String(), "/")
-	if len(split) < 3 || split[2] == "" {
+	key := split[len(split)-1]
+	if key == "" {
 		return nil, ErrEmptyPubKey
 	}
 
-	pubKey, err := cipher.PubKeyFromHex(split[2])
+	pubKey, err := cipher.PubKeyFromHex(key)
 	if err != nil {
 		return nil, err
 	}

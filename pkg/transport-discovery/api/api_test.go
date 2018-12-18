@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,33 +29,27 @@ func newTestTransport() *store.Transport {
 }
 
 func TestBadRequest(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mock := mockstore.NewMockStore(ctrl)
+	mock := mockstore.NewStore()
 
 	api := New(mock, APIOptions{DisableSigVerify: true})
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest("GET", "/register", bytes.NewBufferString("not-a-json"))
+	r := httptest.NewRequest("GET", "/entries", bytes.NewBufferString("not-a-json"))
 
 	api.ServeHTTP(w, r)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-func TestPOSTRegisterTransport(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
+func TestRegisterTransport(t *testing.T) {
+	mock := mockstore.NewStore()
 	trans := newTestTransport()
-	mock := mockstore.NewMockStore(ctrl)
-	mock.EXPECT().RegisterTransport(gomock.Any(), gomock.Any()).Return(nil)
 
 	api := New(mock, APIOptions{DisableSigVerify: true})
 	w := httptest.NewRecorder()
 
 	post := bytes.NewBuffer(nil)
 	json.NewEncoder(post).Encode(trans)
-	r := httptest.NewRequest("POST", "/register", post)
+	r := httptest.NewRequest("POST", "/entries", post)
 	api.ServeHTTP(w, r)
 
 	assert.Equal(t, http.StatusCreated, w.Code, w.Body.String())
@@ -71,26 +64,20 @@ func TestPOSTRegisterTransport(t *testing.T) {
 }
 
 func TestRegisterTimeout(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	timeout := 10 * time.Millisecond
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
-	mock := mockstore.NewMockStore(ctrl)
+	mock := mockstore.NewStore()
 	api := New(mock, APIOptions{DisableSigVerify: true})
 
 	// after this ctx's deadline will be exceeded
 	time.Sleep(timeout * 2)
 
-	mock.EXPECT().
-		RegisterTransport(ctx, gomock.Any()).
-		AnyTimes().
-		Return(ctx.Err())
+	mock.SetError(ctx.Err())
 
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest("POST", "/register", bytes.NewBufferString("{}"))
+	r := httptest.NewRequest("POST", "/entries", bytes.NewBufferString("{}"))
 
 	api.ServeHTTP(w, r.WithContext(ctx))
 
@@ -98,17 +85,14 @@ func TestRegisterTimeout(t *testing.T) {
 }
 
 func TestGETTransportByID(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mock := mockstore.NewMockStore(ctrl)
+	mock := mockstore.NewStore()
 
 	api := New(mock, APIOptions{DisableSigVerify: true})
 
 	ctx := context.Background()
 
 	expected := newTestTransport()
-	mock.EXPECT().GetTransportByID(ctx, expected.ID).
-		Return(expected, nil)
+	mock.RegisterTransport(ctx, expected)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", fmt.Sprintf("/ids/%d", expected.ID), nil)
@@ -124,19 +108,24 @@ func TestGETTransportByID(t *testing.T) {
 	assert.Equal(t, expected.ID, m.ID)
 	assert.Equal(t, expected.Edges, m.Edges)
 	assert.Equal(t, expected.Registered.Unix(), m.Registered.Unix())
+
+	t.Run("Persistence", func(t *testing.T) {
+		found, err := mock.GetTransportByID(ctx, expected.ID)
+		require.NoError(t, err)
+		assert.Equal(t, found, expected)
+	})
 }
 
 func TestDELETETransportByID(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mock := mockstore.NewMockStore(ctrl)
+	mock := mockstore.NewStore()
 
 	expected := newTestTransport()
 	api := New(mock, APIOptions{DisableSigVerify: true})
-	mock.EXPECT().DeregisterTransport(gomock.Any(), store.ID(1)).Return(expected, nil)
+
+	mock.RegisterTransport(context.Background(), expected)
 
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest("DELETE", fmt.Sprintf("/ids/%d", 1), nil)
+	r := httptest.NewRequest("DELETE", fmt.Sprintf("/ids/%d", expected.ID), nil)
 	api.ServeHTTP(w, r)
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 
@@ -153,9 +142,7 @@ func TestDELETETransportByID(t *testing.T) {
 }
 
 func TestGETIncrementingNonces(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mock := mockstore.NewMockStore(ctrl)
+	mock := mockstore.NewStore()
 
 	pubKey, _ := cipher.GenerateKeyPair()
 
@@ -163,11 +150,12 @@ func TestGETIncrementingNonces(t *testing.T) {
 
 	t.Run("ValidRequest", func(t *testing.T) {
 		ctx := context.Background()
-
-		mock.EXPECT().GetNonce(ctx, pubKey).Return(store.Nonce(0xff), nil)
+		for _ = range [0xff]bool{} {
+			mock.IncrementNonce(context.Background(), pubKey)
+		}
 
 		w := httptest.NewRecorder()
-		r := httptest.NewRequest("GET", "/incrementing-nonces/"+pubKey.Hex(), nil)
+		r := httptest.NewRequest("GET", "/security/nonces/"+pubKey.Hex(), nil)
 		api.ServeHTTP(w, r.WithContext(ctx))
 		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 
@@ -181,9 +169,11 @@ func TestGETIncrementingNonces(t *testing.T) {
 
 	t.Run("StoreError", func(t *testing.T) {
 		boom := errors.New("boom")
-		mock.EXPECT().GetNonce(gomock.Any(), gomock.Any()).Return(store.Nonce(0), boom)
+		mock.SetError(boom)
+		defer mock.SetError(nil)
+
 		w := httptest.NewRecorder()
-		r := httptest.NewRequest("GET", "/incrementing-nonces/"+pubKey.Hex(), nil)
+		r := httptest.NewRequest("GET", "/security/nonces/"+pubKey.Hex(), nil)
 		api.ServeHTTP(w, r)
 		require.Equal(t, http.StatusInternalServerError, w.Code, w.Body.String())
 		assert.Contains(t, w.Body.String(), boom.Error())
@@ -191,7 +181,7 @@ func TestGETIncrementingNonces(t *testing.T) {
 
 	t.Run("EmptyKey", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		r := httptest.NewRequest("GET", "/incrementing-nonces/", nil)
+		r := httptest.NewRequest("GET", "/security/nonces/", nil)
 		api.ServeHTTP(w, r)
 		require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
 		assert.Contains(t, w.Body.String(), "empty")
@@ -199,7 +189,7 @@ func TestGETIncrementingNonces(t *testing.T) {
 
 	t.Run("InvalidKey", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		r := httptest.NewRequest("GET", "/incrementing-nonces/foo-bar", nil)
+		r := httptest.NewRequest("GET", "/security/nonces/foo-bar", nil)
 		api.ServeHTTP(w, r)
 		require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
 		assert.Contains(t, w.Body.String(), "Invalid")

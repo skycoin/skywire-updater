@@ -1,12 +1,10 @@
 package api
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,19 +30,14 @@ func validHeaders(t *testing.T, payload []byte) http.Header {
 }
 
 func TestAuthFromHeaders(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mock := mockstore.NewMockStore(ctrl)
+	mock := mockstore.NewStore()
 
 	api := New(mock, APIOptions{})
-	ctx := context.Background()
 
 	t.Run("Valid", func(t *testing.T) {
-		mock.EXPECT().IncrementNonce(gomock.Any(), gomock.Any()).AnyTimes()
-		mock.EXPECT().GetNonce(ctx, testPubKey).Return(store.Nonce(0), nil)
 
 		w := httptest.NewRecorder()
-		r := httptest.NewRequest("POST", "/register", nil)
+		r := httptest.NewRequest("POST", "/entries", nil)
 		r.Header = validHeaders(t, nil)
 
 		api.ServeHTTP(w, r)

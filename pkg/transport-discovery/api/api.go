@@ -33,9 +33,9 @@ func New(s store.Store, opts APIOptions) *API {
 	mux := http.NewServeMux()
 	api := &API{mux: mux, store: s, opts: opts}
 
-	mux.Handle("/register", api.withSigVer(apiHandler(api.handleRegister)))
+	mux.Handle("/entries", api.withSigVer(apiHandler(api.handleRegister)))
 	mux.Handle("/ids/", api.withSigVer(apiHandler(api.handleTransports)))
-	mux.Handle("/incrementing-nonces/", apiHandler(api.handleIncrementingNonces))
+	mux.Handle("/security/nonces/", apiHandler(api.handleIncrementingNonces))
 
 	return api
 }
