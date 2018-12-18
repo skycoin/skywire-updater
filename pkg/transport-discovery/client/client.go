@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -24,23 +25,29 @@ type Client struct {
 	sec    cipher.SecKey
 }
 
-// Creates
+func sanitizedAddr(addr string) string {
+	u, err := url.Parse(addr)
+	if err != nil {
+		return "http://localhost"
+	}
+
+	if u.Scheme == "" {
+		u.Scheme = "http"
+	}
+
+	u.Path = strings.TrimSuffix(u.Path, "/")
+	return u.String()
+}
+
+// Creates a new client instance.
 func New(addr string) *Client {
 	// Sanitize addr
 	if addr == "" {
 		addr = "http://localhost"
 	}
 
-	if !strings.HasPrefix(addr, "http://") && !strings.HasPrefix(addr, "https://") {
-		addr = "http://" + addr
-	}
-
-	if strings.HasSuffix(addr, "/") {
-		addr = addr[:len(addr)-1]
-	}
-
 	return &Client{
-		addr:   addr,
+		addr:   sanitizedAddr(addr),
 		client: http.Client{},
 	}
 }
