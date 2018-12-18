@@ -57,7 +57,7 @@ func TestClientAuth(t *testing.T) {
 	))
 	defer srv.Close()
 
-	c := New(srv.URL).WithPubAndSecKey(testPubKey, testSecKey)
+	c := NewWithAuth(srv.URL, testPubKey, testSecKey)
 
 	wg.Add(1)
 	_, err := c.Post(context.Background(), "/", bytes.NewBufferString("test payload"))

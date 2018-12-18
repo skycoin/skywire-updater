@@ -45,13 +45,14 @@ func New(addr string) *Client {
 	}
 }
 
-// WithPubAndSecKey set a public key to the client.
+// NewWithAuth creates a new client setting a public key to the client to be used for auth.
 // When keys are set, the client will sign request before submitting.
 // The signature information is transmitted in the header using:
 // * SW-Public: The specified public key
 // * SW-Nonce:  The nonce for that public key
 // * SW-Sig:    The signature of the payload + the nonce
-func (c *Client) WithPubAndSecKey(key cipher.PubKey, sec cipher.SecKey) *Client {
+func NewWithAuth(addr string, key cipher.PubKey, sec cipher.SecKey) *Client {
+	c := New(addr)
 	c.key = key
 	c.sec = sec
 	return c
