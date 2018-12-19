@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/watercompany/skywire-services/updater/pkg/logger"
+	"github.com/watercompany/skywire-services/updater/config"
 )
 
 type Fetcher interface {
@@ -13,12 +14,16 @@ type Fetcher interface {
 }
 
 
-func New(kind, service, repository, notifyUrl string, log *logger.Logger) Fetcher {
-	switch kind {
+func New(kind, service, localName, repository, notifyUrl string, c config.ServiceConfig,
+	scriptTimeout time.Duration, log *logger.Logger) Fetcher {
+
+		switch kind {
 	case "git":
 		return NewGit(service, repository, notifyUrl, log)
 	case "naive":
-		return NewNaive(service, repository, notifyUrl, log)
+		return NewNaive(service, localName, repository, notifyUrl, c.CheckScriptInterpreter, c.CheckScript,
+			c.CheckScriptExtraArguments, scriptTimeout,log)
 	}
-	return NewNaive(service, repository, notifyUrl, log)
+	return NewNaive(service, localName, repository, notifyUrl, c.CheckScriptInterpreter, c.CheckScript,
+		c.CheckScriptExtraArguments, scriptTimeout,log)
 }

@@ -47,9 +47,13 @@ type ServiceConfig struct {
 	OfficialName         string   `yaml:"official_name"`
 	LocalName            string   `yaml:"local_name"`
 	UpdateScript         string   `yaml:"update_script"`
-	ScriptTimeout        string   `yaml:"script_timeout"`
-	ScriptInterpreter    string   `yaml:"script_interpreter"`
-	ScriptExtraArguments []string `yaml:"script_extra_arguments"`
+	UpdateScriptTimeout        string   `yaml:"update_script_timeout"`
+	UpdateScriptInterpreter    string   `yaml:"update_script_interpreter"`
+	UpdateScriptExtraArguments []string `yaml:"update_script_extra_arguments"`
+	CheckScript         string   `yaml:"check_script"`
+	CheckScriptTimeout        string   `yaml:"check_script_timeout"`
+	CheckScriptInterpreter    string   `yaml:"check_script_interpreter"`
+	CheckScriptExtraArguments []string `yaml:"check_script_extra_arguments"`
 	ActiveUpdateChecker  string   `yaml:"active_update_checker"`
 	PassiveUpdateChecker string   `yaml:"passive_update_checker"`
 	CheckTag             string   `yaml:"check_tag"`

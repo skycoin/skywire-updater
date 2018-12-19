@@ -15,6 +15,7 @@ import (
 	"github.com/skycoin/skycoin/src/util/logging"
 	"sync"
 	"fmt"
+	"path/filepath"
 )
 
 var (
@@ -71,28 +72,32 @@ func New(conf *config.Configuration) *Supervisor {
 }
 
 func (s *Supervisor) Register(service, url, notifyUrl, version string) {
-	checker := active.New(defaultSubscriptorConfig.kind,
-		service, url, notifyUrl, loggerPkg.NewLogger(service))
-
-	s.registerChecker(service, checker)
-
-	checker.SetInterval(defaultSubscriptorConfig.interval)
-	go checker.Start()
-
 	serviceConfig := config.ServiceConfig{
-		Repository: notifyUrl,
-		ScriptInterpreter: "/bin/bash",
+		Repository: url,
+		UpdateScriptInterpreter: "/bin/bash",
 		LocalName: service,
 		OfficialName: service,
-		ScriptExtraArguments: []string{service, url},
+		UpdateScriptExtraArguments: []string{service, url},
 		UpdateScript: "generic-service.sh",
-		ScriptTimeout: "6m",
+		UpdateScriptTimeout: "6m",
+		CheckScriptExtraArguments: []string{service, url},
+		CheckScript: filepath.Join(s.config.ScriptsDirectory, "generic-service-check-update.sh"),
+		CheckScriptTimeout: "6m",
 		Updater: "default",
 		CheckTag: "master",
 	}
 
 	s.updaters["default"].RegisterService(serviceConfig, service, s.config.ScriptsDirectory)
 	s.config.SubscribeService(service, serviceConfig)
+
+	checker := active.New(defaultSubscriptorConfig.kind,
+		service, service,serviceConfig.Repository, notifyUrl, serviceConfig,
+		time.Minute*6, loggerPkg.NewLogger(service))
+	s.registerChecker(service, checker)
+
+	checker.SetInterval(defaultSubscriptorConfig.interval)
+	go checker.Start()
+
 }
 
 func (s *Supervisor) Unregister(service string) error {
@@ -190,12 +195,20 @@ func (s *Supervisor) registerActiveChecker(conf *config.Configuration, c config.
 		logrus.Fatalf("cannot parse interval %s of active checker configuration %s. %s", activeConfig.Interval,
 			c.ActiveUpdateChecker, err)
 	}
+	checkTimeout, err := time.ParseDuration(activeConfig.Interval)
+	if err != nil {
+		logrus.Fatalf("cannot parse check script timeout %s of active checker configuration %s. %s", activeConfig.Interval,
+			c.ActiveUpdateChecker, err)
+	}
 	log := loggerPkg.NewLogger(name)
 	fc, err := conf.FetcherConfig(c.ActiveUpdateChecker)
 	if err != nil {
 		panic(err)
 	}
-	checker := active.New(fc.Kind, name, c.Repository, fc.NotifyUrl, log)
+	fmt.Printf("service config: %+v\n", c)
+
+	c.CheckScript = filepath.Join(conf.ScriptsDirectory, c.CheckScript)
+	checker := active.New(fc.Kind, name, c.LocalName, c.Repository, fc.NotifyUrl, c, checkTimeout, log)
 	checker.SetInterval(interval)
 	s.activeCheckers[name] = checker
 }

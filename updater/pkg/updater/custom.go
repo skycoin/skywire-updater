@@ -73,17 +73,17 @@ func (c *Custom) service(officialName string) (customServiceConfig, bool) {
 }
 
 func (c *Custom) parseServiceConfig(conf config.ServiceConfig, officialName, scriptsDirectory string) customServiceConfig {
-	duration, err := time.ParseDuration(conf.ScriptTimeout)
+	duration, err := time.ParseDuration(conf.UpdateScriptTimeout)
 	if err != nil {
 		duration = defaultScriptTimeout
 		logrus.Warnf("cannot parse timeout duration %s of service %s configuration."+
-			" setting default timeout %s", conf.ScriptTimeout, conf.OfficialName, duration.String())
+			" setting default timeout %s", conf.UpdateScriptTimeout, conf.OfficialName, duration.String())
 	}
 	return customServiceConfig{
 		officialName:         officialName,
 		localName:            conf.LocalName,
-		scriptExtraArguments: conf.ScriptExtraArguments,
-		scriptInterpreter:    conf.ScriptInterpreter,
+		scriptExtraArguments: conf.UpdateScriptExtraArguments,
+		scriptInterpreter:    conf.UpdateScriptInterpreter,
 		scriptTimeout:        duration,
 		tag:                  conf.CheckTag,
 		updateScript:         filepath.Join(scriptsDirectory, conf.UpdateScript),

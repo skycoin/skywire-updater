@@ -1,4 +1,4 @@
-package updater
+package updater_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ echo "arguments {$@}"
 `
 
 func TestCustom(t *testing.T) {
-	customConfig := config.Configuration{
+	customConfig := &config.Configuration{
 		Updaters: map[string]config.UpdaterConfig{
 			"test": {
 				Kind: "custom",
@@ -31,10 +31,10 @@ func TestCustom(t *testing.T) {
 			"myservice": {
 				LocalName:            "myservice",
 				OfficialName:         "myservice",
-				ScriptInterpreter:    "/bin/bash",
+				UpdateScriptInterpreter:    "/bin/bash",
 				UpdateScript:         "-s",
-				ScriptExtraArguments: []string{"<<<", testScript, "arg2"},
-				ScriptTimeout:        "5s",
+				UpdateScriptExtraArguments: []string{"<<<", testScript, "arg2"},
+				UpdateScriptTimeout:        "5s",
 				Updater:              "test",
 			},
 		},
@@ -48,7 +48,7 @@ func TestCustom(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
-	customConfig := config.Configuration{
+	customConfig := &config.Configuration{
 		Updaters: map[string]config.UpdaterConfig{
 			"test": {
 				Kind: "custom",
@@ -59,10 +59,10 @@ func TestTimeout(t *testing.T) {
 				LocalName:            "myservice",
 				OfficialName:         "myservice",
 				Updater:              "test",
-				ScriptInterpreter:    "top",
+				UpdateScriptInterpreter:    "top",
 				UpdateScript:         "",
-				ScriptExtraArguments: []string{},
-				ScriptTimeout:        "1s",
+				UpdateScriptExtraArguments: []string{},
+				UpdateScriptTimeout:        "1s",
 			},
 		},
 	}

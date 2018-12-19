@@ -1,3 +1,5 @@
+scripts_directory: "/Users/ivan/Desktop/skycoin/src/github.com/watercompany/skywire-services/updater/pkg/updater/scripts/"
+
 active_update_checkers:
   naive:
     interval: "30s"
@@ -12,11 +14,14 @@ services:
   skywire-messaging-server:
     official_name: "skywire-messaging"
     local_name: "msgsrv"
-    update_script: "/Users/ivan/Desktop/skycoin/pkg/github.com/watercompany/skywire-services/updater/pkg/updater/scripts/skywire-messaging.sh"
-    script_interpreter: "/bin/bash"
-    script_timeout: "20m"
-    script_extra_arguments:
+    update_script: "skywire-messaging.sh"
+    check_script: "always_update.sh"
+    check_script_interpreter: "/bin/bash"
+    check_script_timeout: "20m"
+    update_script_interpreter: "/bin/bash"
+    update_script_timeout: "20m"
+    update_script_extra_arguments:
       - "msgsrv -c localhost:9094 -a localhost:8084 -s test-server"
     active_update_checker: "naive"
-    repository: "/skycoin/skywire"
+    repository: "/watercompany/messaging"
     updater: "custom"

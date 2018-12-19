@@ -4,32 +4,44 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/watercompany/skywire-services/updater/config"
 	"github.com/watercompany/skywire-services/updater/pkg/logger"
 	"github.com/watercompany/skywire-services/updater/pkg/checker"
+	"github.com/go-cmd/cmd"
+	"fmt"
+	"path/filepath"
 )
 
 type naive struct {
 	// Url should be in the format /:owner/:Repository
 	service   string
+	localName string
 	url       string
 	interval  time.Duration
 	ticker    *time.Ticker
 	lock      sync.Mutex
 	exit      chan int
 	notifyUrl string
+	updateCheckScript string
+	scriptTimeout time.Duration
+	scriptExtraArguments []string
+	scriptInterpreter string
 	log       *logger.Logger
 	config.CustomLock
 }
 
-func NewNaive(service, url string, notifyUrl string, log *logger.Logger) *naive {
+func NewNaive(service, localName, url, notifyUrl, scriptInterpreter, updateCheckScript string,
+	scriptExtraArguments []string, scriptTimeout time.Duration, log *logger.Logger) *naive {
 	return &naive{
-		url:       "github.com" + url,
+		url:       filepath.Join("github.com", url),
 		exit:      make(chan int),
 		service:   service,
+		localName: localName,
 		notifyUrl:	notifyUrl,
+		updateCheckScript: updateCheckScript,
+		scriptTimeout: scriptTimeout,
+		scriptExtraArguments: scriptExtraArguments,
+		scriptInterpreter: scriptInterpreter,
 		log:       log,
 	}
 }
@@ -73,29 +85,90 @@ func (n *naive) checkIfNew() {
 
 	n.log.Info("updating...")
 
-	err := checker.NotifyUpdate(n.notifyUrl, n.service, "master", "master", "token")
-
+	isUpdate, err := n.checkIfUpdate()
 	if err != nil {
-		logrus.Error(err)
+		n.log.Error(err)
+	}
+	if isUpdate {
+		err = checker.NotifyUpdate(n.notifyUrl, n.service, "master", "master", "token")
+		if err != nil {
+			n.log.Error(err)
+		}
+	} else {
+		n.log.Info("up to date")
 	}
 }
 
-/*func (n *naive) tryUpdate() error {
-	for i := 0; i < n.retries; i++ {
-		err := <-n.updater.Update(n.service, n.service, n.log)
-		if err != nil {
-			n.log.Errorf("error on update %s", err)
+func (n *naive) checkIfUpdate() (bool, error) {
+	var errCh = make(chan error)
 
-			if i == (n.retries - 1) {
-				return fmt.Errorf("maximum retries attempted, service %s failed to update", n.service)
-			} else {
-				n.log.Infof("retry again in %s", n.retryTime.String())
+	customCmd, statusChan := createAndLaunch(n.localName, "master",
+		n.scriptInterpreter, n.updateCheckScript, n.service, n.url,  n.scriptExtraArguments, n.log)
+	ticker := time.NewTicker(time.Second * 2)
+
+	go logStdout(ticker, customCmd, n.log)
+
+	go timeoutCmd(n.service, n.scriptTimeout, customCmd, errCh)
+
+	return waitForExit(statusChan, errCh, n.log)
+}
+
+func createAndLaunch(localName, version, scriptInterpreter, script, service, url string, arguments []string, log *logger.Logger) (*cmd.Cmd, <-chan cmd.Status) {
+	command := buildCommand(localName, version, script, service, url, arguments)
+	log.Info("running command: ", command)
+	customCmd := cmd.NewCmd(scriptInterpreter, command...)
+	statusChan := customCmd.Start()
+	return customCmd, statusChan
+}
+
+func buildCommand(localName, version,  script, service ,url string, arguments []string) []string {
+	fmt.Println("localName: ", localName)
+	fmt.Println("service: ", service)
+	fmt.Println("url: ", url)
+	command := []string{
+		script,
+		localName,
+		version,
+		service,
+		url,
+	}
+	return append(command, arguments...)
+}
+
+func logStdout(ticker *time.Ticker, customCmd *cmd.Cmd, log *logger.Logger) {
+	var previousLastLine int
+
+	for range ticker.C {
+		status := customCmd.Status()
+		currentLastLine := len(status.Stdout)
+
+		if currentLastLine != previousLastLine {
+			for _, line := range status.Stdout[previousLastLine:] {
+				log.Infof("script stdout: %s", line)
 			}
-		} else {
-			break
+			previousLastLine = currentLastLine
 		}
 
-		time.Sleep(n.retryTime)
 	}
-	return nil
-}*/
+}
+
+func timeoutCmd(service string, timeout time.Duration, customCmd *cmd.Cmd, errCh chan error) {
+	<-time.After(timeout)
+	customCmd.Stop()
+	errCh <- fmt.Errorf("update script for service %s timed out", service)
+}
+
+func waitForExit(statusChan <-chan cmd.Status, errCh chan error, log *logger.Logger) (bool, error) {
+	for {
+		select {
+		case finalStatus := <-statusChan:
+			log.Infof("%s exit with: %d", finalStatus.Cmd, finalStatus.Exit)
+			if finalStatus.Exit != 0 {
+				return false, fmt.Errorf("exit with non-zero status %d", finalStatus.Exit)
+			}
+			return true, nil
+		case err := <- errCh:
+			return false, err
+		}
+	}
+}
