@@ -1,4 +1,4 @@
-package tests
+package store
 
 import (
 	"context"
@@ -8,12 +8,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
 type NonceSuite struct {
 	suite.Suite
-	Store store.NonceStore
+	NonceStore
 }
 
 func (s *NonceSuite) SetupTest() {
@@ -26,29 +25,29 @@ func (s *NonceSuite) TestNonce() {
 
 	t.Run("GetUnexistingNonce", func(t *testing.T) {
 		pub, _ := cipher.GenerateKeyPair()
-		nonce, err := s.Store.GetNonce(ctx, pub)
+		nonce, err := s.GetNonce(ctx, pub)
 		require.NoError(t, err)
-		assert.Equal(t, store.Nonce(0), nonce)
+		assert.Equal(t, Nonce(0), nonce)
 	})
 
 	t.Run("IncrementNonce", func(t *testing.T) {
 		var (
-			nonce store.Nonce
+			nonce Nonce
 			err   error
 		)
 
 		pub, _ := cipher.GenerateKeyPair()
 
-		nonce, err = s.Store.IncrementNonce(ctx, pub)
+		nonce, err = s.IncrementNonce(ctx, pub)
 		require.NoError(t, err)
-		assert.Equal(t, store.Nonce(1), nonce)
+		assert.Equal(t, Nonce(1), nonce)
 
-		nonce, err = s.Store.IncrementNonce(ctx, pub)
+		nonce, err = s.IncrementNonce(ctx, pub)
 		require.NoError(t, err)
-		assert.Equal(t, store.Nonce(2), nonce)
+		assert.Equal(t, Nonce(2), nonce)
 
-		nonce, err = s.Store.GetNonce(ctx, pub)
+		nonce, err = s.GetNonce(ctx, pub)
 		require.NoError(t, err)
-		assert.Equal(t, store.Nonce(2), nonce)
+		assert.Equal(t, Nonce(2), nonce)
 	})
 }

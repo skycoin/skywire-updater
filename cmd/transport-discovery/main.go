@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net"
 	"net/http"
@@ -9,8 +8,6 @@ import (
 	"github.com/urfave/cli"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/api"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
-	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/memory"
-	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/sql"
 )
 
 func main() {
@@ -31,21 +28,10 @@ var serve = cli.Command{
 		cli.StringFlag{Name: "db", Value: "user=postgres database=transports disablessl=true", Usage: "Postgres connection string for the transport database"},
 	},
 	Action: func(c *cli.Context) error {
-		tdb, err := sql.NewStore(c.String("db"))
+		s, err := store.New("memory")
 		if err != nil {
 			return err
 		}
-		defer tdb.Close()
-		if err := tdb.Migrate(context.Background()); err != nil {
-			return err
-		}
-
-		ndb := memory.NewStore()
-
-		s := struct {
-			store.TransportStore
-			store.NonceStore
-		}{tdb, ndb}
 
 		l, err := net.Listen("tcp", c.String("bind"))
 		if err != nil {

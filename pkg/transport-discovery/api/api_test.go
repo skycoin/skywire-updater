@@ -17,8 +17,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/watercompany/skywire-node/pkg/transport"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
-	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/mockstore"
 )
+
+type errorSetter interface {
+	SetError(error)
+}
 
 func newTestEntry() *transport.Entry {
 	pk1, _ := cipher.GenerateKeyPair()
@@ -32,7 +35,7 @@ func newTestEntry() *transport.Entry {
 }
 
 func TestBadRequest(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
 
 	api := New(mock, APIOptions{DisableSigVerify: true})
 	w := httptest.NewRecorder()
@@ -44,7 +47,7 @@ func TestBadRequest(t *testing.T) {
 }
 
 func TestRegisterTransport(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
 	signedEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}
 
 	api := New(mock, APIOptions{DisableSigVerify: true})
@@ -70,14 +73,14 @@ func TestRegisterTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
 	signedEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}
 	api := New(mock, APIOptions{DisableSigVerify: true})
 
 	// after this ctx's deadline will be exceeded
 	time.Sleep(timeout * 2)
 
-	mock.SetError(ctx.Err())
+	mock.(errorSetter).SetError(ctx.Err())
 
 	w := httptest.NewRecorder()
 	body := bytes.NewBuffer(nil)
@@ -90,7 +93,7 @@ func TestRegisterTimeout(t *testing.T) {
 }
 
 func TestGETTransportByID(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
 
 	api := New(mock, APIOptions{DisableSigVerify: true})
 
@@ -119,7 +122,7 @@ func TestGETTransportByID(t *testing.T) {
 }
 
 func TestUpdateStatus(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
 	sEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}
 	require.NoError(t, mock.RegisterTransport(context.Background(), sEntry))
 
@@ -143,7 +146,7 @@ func TestUpdateStatus(t *testing.T) {
 }
 
 func TestGETTransportByEdge(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
 
 	api := New(mock, APIOptions{DisableSigVerify: true})
 
@@ -173,7 +176,7 @@ func TestGETTransportByEdge(t *testing.T) {
 }
 
 func TestGETIncrementingNonces(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
 
 	pubKey, _ := cipher.GenerateKeyPair()
 
@@ -200,8 +203,8 @@ func TestGETIncrementingNonces(t *testing.T) {
 
 	t.Run("StoreError", func(t *testing.T) {
 		boom := errors.New("boom")
-		mock.SetError(boom)
-		defer mock.SetError(nil)
+		mock.(errorSetter).SetError(boom)
+		defer mock.(errorSetter).SetError(nil)
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/security/nonces/"+pubKey.Hex(), nil)

@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/watercompany/skywire-node/pkg/transport"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/api"
-	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/mockstore"
+	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
 var testPubKey, testSecKey = cipher.GenerateKeyPair()
@@ -160,7 +160,8 @@ func TestRegisterTransportResponses(t *testing.T) {
 }
 
 func TestRegisterTransports(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
+
 	srv := httptest.NewServer(api.New(mock, api.APIOptions{}))
 	defer srv.Close()
 
@@ -175,7 +176,7 @@ func TestRegisterTransports(t *testing.T) {
 }
 
 func TestGetTransportByID(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
 	srv := httptest.NewServer(api.New(mock, api.APIOptions{}))
 	defer srv.Close()
 
@@ -191,7 +192,7 @@ func TestGetTransportByID(t *testing.T) {
 }
 
 func TestGetTransportsByEdge(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
 	srv := httptest.NewServer(api.New(mock, api.APIOptions{}))
 	defer srv.Close()
 
@@ -208,7 +209,7 @@ func TestGetTransportsByEdge(t *testing.T) {
 }
 
 func TestUpdateStatuses(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
 	srv := httptest.NewServer(api.New(mock, api.APIOptions{}))
 	defer srv.Close()
 

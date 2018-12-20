@@ -1,4 +1,4 @@
-package tests
+package store
 
 import (
 	"context"
@@ -10,12 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/watercompany/skywire-node/pkg/transport"
-	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
 type TransportSuite struct {
 	suite.Suite
-	Store store.TransportStore
+	TransportStore
 }
 
 func (s *TransportSuite) SetupTest() {
@@ -39,53 +38,53 @@ func (s *TransportSuite) TestRegister() {
 	}
 
 	t.Run(".RegisterTransport", func(t *testing.T) {
-		require.NoError(t, s.Store.RegisterTransport(ctx, sEntry))
+		require.NoError(t, s.RegisterTransport(ctx, sEntry))
 		assert.True(t, sEntry.Registered > 0)
 	})
 
 	t.Run(".GetTransportByID", func(t *testing.T) {
-		found, err := s.Store.GetTransportByID(ctx, sEntry.Entry.ID)
+		found, err := s.GetTransportByID(ctx, sEntry.Entry.ID)
 		require.NoError(t, err)
 		assert.Equal(t, sEntry.Entry, found.Entry)
 		assert.True(t, found.IsUp)
 	})
 
 	t.Run(".GetTransportsByEdge", func(t *testing.T) {
-		entries, err := s.Store.GetTransportsByEdge(ctx, pk1)
+		entries, err := s.GetTransportsByEdge(ctx, pk1)
 		require.NoError(t, err)
 		require.Len(t, entries, 1)
 		assert.Equal(t, sEntry.Entry, entries[0].Entry)
 		assert.True(t, entries[0].IsUp)
 
-		entries, err = s.Store.GetTransportsByEdge(ctx, pk2)
+		entries, err = s.GetTransportsByEdge(ctx, pk2)
 		require.NoError(t, err)
 		require.Len(t, entries, 1)
 		assert.Equal(t, sEntry.Entry, entries[0].Entry)
 		assert.True(t, entries[0].IsUp)
 
 		pk, _ := cipher.GenerateKeyPair()
-		entries, err = s.Store.GetTransportsByEdge(ctx, pk)
+		entries, err = s.GetTransportsByEdge(ctx, pk)
 		require.NoError(t, err)
 		require.Len(t, entries, 0)
 	})
 
 	t.Run(".UpdateStatus", func(t *testing.T) {
-		entry, err := s.Store.UpdateStatus(ctx, sEntry.Entry.ID, false)
+		entry, err := s.UpdateStatus(ctx, sEntry.Entry.ID, false)
 		require.Error(t, err)
 		assert.Equal(t, "invalid auth", err.Error())
 
-		entry, err = s.Store.UpdateStatus(context.WithValue(ctx, "auth-pub-key", pk1), sEntry.Entry.ID, false)
+		entry, err = s.UpdateStatus(context.WithValue(ctx, "auth-pub-key", pk1), sEntry.Entry.ID, false)
 		require.NoError(t, err)
 		assert.Equal(t, sEntry.Entry, entry.Entry)
 		assert.False(t, entry.IsUp)
 	})
 
 	t.Run(".DeregisterTransport", func(t *testing.T) {
-		entry, err := s.Store.DeregisterTransport(ctx, sEntry.Entry.ID)
+		entry, err := s.DeregisterTransport(ctx, sEntry.Entry.ID)
 		require.NoError(t, err)
 		assert.Equal(t, sEntry.Entry, entry)
 
-		_, err = s.Store.GetTransportByID(ctx, sEntry.Entry.ID)
+		_, err = s.GetTransportByID(ctx, sEntry.Entry.ID)
 		require.Error(t, err)
 		assert.Equal(t, "Transport not found", err.Error())
 	})

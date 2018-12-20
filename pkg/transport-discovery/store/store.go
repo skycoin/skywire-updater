@@ -45,3 +45,12 @@ type NonceStore interface {
 	IncrementNonce(context.Context, cipher.PubKey) (Nonce, error)
 	GetNonce(context.Context, cipher.PubKey) (Nonce, error)
 }
+
+func New(sType string, args ...string) (Store, error) {
+	switch sType {
+	case "memory":
+		return NewMemoryStore(), nil
+	default:
+		return nil, errors.New("unknown store type")
+	}
+}

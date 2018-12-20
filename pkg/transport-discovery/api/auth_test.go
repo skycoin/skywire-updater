@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/auth"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
-	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/mockstore"
 )
 
 var testPubKey, testSec = cipher.GenerateKeyPair()
@@ -28,7 +27,7 @@ func validHeaders(t *testing.T, payload []byte) http.Header {
 }
 
 func TestAuthFromHeaders(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory")
 
 	api := New(mock, APIOptions{})
 

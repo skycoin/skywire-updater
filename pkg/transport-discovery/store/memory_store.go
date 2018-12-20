@@ -1,4 +1,4 @@
-package mockstore
+package store
 
 import (
 	"context"
@@ -9,31 +9,28 @@ import (
 	"github.com/google/uuid"
 	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/watercompany/skywire-node/pkg/transport"
-	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
-type Store struct {
-	transports []*store.EntryWithStatus
-	nonces     map[cipher.PubKey]store.Nonce
+type mStore struct {
+	transports []*EntryWithStatus
+	nonces     map[cipher.PubKey]Nonce
 
 	err error
 	mu  sync.Mutex
 }
 
-var _ store.Store = &Store{}
-
-func NewStore() *Store {
-	return &Store{
-		transports: []*store.EntryWithStatus{},
-		nonces:     make(map[cipher.PubKey]store.Nonce),
+func NewMemoryStore() *mStore {
+	return &mStore{
+		transports: []*EntryWithStatus{},
+		nonces:     make(map[cipher.PubKey]Nonce),
 	}
 }
 
-func (s *Store) SetError(err error) {
+func (s *mStore) SetError(err error) {
 	s.err = err
 }
 
-func (s *Store) RegisterTransport(_ context.Context, entry *transport.SignedEntry) error {
+func (s *mStore) RegisterTransport(_ context.Context, entry *transport.SignedEntry) error {
 	if s.err != nil {
 		return s.err
 	}
@@ -45,7 +42,7 @@ func (s *Store) RegisterTransport(_ context.Context, entry *transport.SignedEntr
 		}
 	}
 
-	s.transports = append(s.transports, &store.EntryWithStatus{
+	s.transports = append(s.transports, &EntryWithStatus{
 		Entry:      entry.Entry,
 		IsUp:       true,
 		Registered: time.Now().Unix(),
@@ -57,7 +54,7 @@ func (s *Store) RegisterTransport(_ context.Context, entry *transport.SignedEntr
 	return nil
 }
 
-func (s *Store) DeregisterTransport(_ context.Context, id uuid.UUID) (*transport.Entry, error) {
+func (s *mStore) DeregisterTransport(_ context.Context, id uuid.UUID) (*transport.Entry, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -78,7 +75,7 @@ func (s *Store) DeregisterTransport(_ context.Context, id uuid.UUID) (*transport
 	return nil, errors.New("Transport not found")
 }
 
-func (s *Store) GetTransportByID(_ context.Context, id uuid.UUID) (*store.EntryWithStatus, error) {
+func (s *mStore) GetTransportByID(_ context.Context, id uuid.UUID) (*EntryWithStatus, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -98,7 +95,7 @@ func (s *Store) GetTransportByID(_ context.Context, id uuid.UUID) (*store.EntryW
 	return nil, errors.New("Transport not found")
 }
 
-func (s *Store) GetTransportsByEdge(_ context.Context, pk cipher.PubKey) ([]*store.EntryWithStatus, error) {
+func (s *mStore) GetTransportsByEdge(_ context.Context, pk cipher.PubKey) ([]*EntryWithStatus, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -106,7 +103,7 @@ func (s *Store) GetTransportsByEdge(_ context.Context, pk cipher.PubKey) ([]*sto
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	res := []*store.EntryWithStatus{}
+	res := []*EntryWithStatus{}
 	for _, entry := range s.transports {
 		if entry == nil {
 			continue
@@ -120,7 +117,7 @@ func (s *Store) GetTransportsByEdge(_ context.Context, pk cipher.PubKey) ([]*sto
 	return res, nil
 }
 
-func (s *Store) UpdateStatus(ctx context.Context, id uuid.UUID, isUp bool) (*store.EntryWithStatus, error) {
+func (s *mStore) UpdateStatus(ctx context.Context, id uuid.UUID, isUp bool) (*EntryWithStatus, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -153,7 +150,7 @@ func (s *Store) UpdateStatus(ctx context.Context, id uuid.UUID, isUp bool) (*sto
 	return nil, errors.New("Transport not found")
 }
 
-func (s *Store) GetNonce(ctx context.Context, pk cipher.PubKey) (store.Nonce, error) {
+func (s *mStore) GetNonce(ctx context.Context, pk cipher.PubKey) (Nonce, error) {
 	if s.err != nil {
 		return 0, s.err
 	}
@@ -163,7 +160,7 @@ func (s *Store) GetNonce(ctx context.Context, pk cipher.PubKey) (store.Nonce, er
 	return s.nonces[pk], nil
 }
 
-func (s *Store) IncrementNonce(ctx context.Context, pk cipher.PubKey) (store.Nonce, error) {
+func (s *mStore) IncrementNonce(ctx context.Context, pk cipher.PubKey) (Nonce, error) {
 	if s.err != nil {
 		return 0, s.err
 	}
