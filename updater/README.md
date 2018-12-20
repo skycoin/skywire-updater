@@ -97,42 +97,49 @@ The configuration file has 3 sections:
 1. **active_update_checkers:**
     Is a list containing named active checkers configurations, each named item should hold the next configuration:
 
-    notify_url: url to send a post request to when an update has been found. Example: "http://localhost:8989/update"
-    interval: interval in which to check if there is a new update. Example: "30s"
-    kind: which kind of checker is it, git or dockerhub: "git"
+```
+notify_url: url to send a post request to when an update has been found. Example: "http://localhost:8989/update"
+interval: interval in which to check if there is a new update. Example: "30s"
+kind: which kind of checker is it, git or dockerhub: "git"
+```
 
 2. **passive_update_checkers:**
     Is a list containing named passive checkers configurations, each named item should hold the next configuration:
 
-    message-broker: kind of the message-broker to subscribe to. Example: "nats"
-    topic: topic on the message-broker to subscribe to. Example: "top"
-    urls: urls of message-broker cluster to join to. One or more. Example:
-        - "http://localhost:4222"
+```
+message-broker: kind of the message-broker to subscribe to. Example: "nats"
+topic: topic on the message-broker to subscribe to. Example: "top"
+urls: urls of message-broker cluster to join to. One or more. Example:
+    - "http://localhost:4222"
+```
 
 3. **updaters:**
     Is a list containing named updaters, each named item should hold the next configuration:
 
-    kind: the kind of updater to instantiate, swarm or custom. Example: "custom"
+```
+kind: the kind of updater to instantiate, swarm or custom. Example: "custom"
+```
 
 4. **services:**
     Is a list containing named services, each named item should hold the next configuration:
 
-    official_name: official name for the service, this is how is it named on their documentation, etc. Example "maria"
-    local_name: name of the service running on your machine, in case it's different. This is needed for swarm or for the scripts to find the service they need to update. Example: "mariadb"
-    check_script: name of the check update script in case you are using a custom updater. Example:  "custom_script.sh"
-    check_script_interpreter: interpreter of the script in case you are using a custom updater. Example: "/bin/bash"
-    check_script_timeout: timeout for the script in case you are using a custom updater. Example: "20s"
-    check_script_extra_arguments: extra arguments that you want to be passed to the updater script in case you are using a custom updater. Example: ["-a 1"]
-    update_script: name of the update script in case you are using a custom updater. Example:  "custom_script.sh"
-    update_script_interpreter: interpreter of the script in case you are using a custom updater. Example: "/bin/bash"
-    update_script_timeout: timeout for the script in case you are using a custom updater. Example: "20s"
-    update_script_extra_arguments: extra arguments that you want to be passed to the updater script in case you are using a custom updater. Example: ["-a 1"]
-    active_update_checker: name of a previously defined active update checker if used. Example: "dockerhub_fetcher"
-    active_update_checker: name of a previously defined passive update checker if used. Example: "nats"
-    repository: repository of the service in the format /:owner/:name for lookup on dockerhub or github. Example: "/library/mariadb"
-    check_tag: name of the tag to check for updates, this is used to check for updates on github or dockerhub. Don't needed for passive checkers. Example: "latest"
-    updater: previously defined updater configuration name. Example: "custom"
-
+```
+official_name: official name for the service, this is how is it named on their documentation, etc. Example "maria"
+local_name: name of the service running on your machine, in case it's different. This is needed for swarm or for the scripts to find the service they need to update. Example: "mariadb"
+check_script: name of the check update script in case you are using a custom updater. Example:  "custom_script.sh"
+check_script_interpreter: interpreter of the script in case you are using a custom updater. Example: "/bin/bash"
+check_script_timeout: timeout for the script in case you are using a custom updater. Example: "20s"
+check_script_extra_arguments: extra arguments that you want to be passed to the updater script in case you are using a custom updater. Example: ["-a 1"]
+update_script: name of the update script in case you are using a custom updater. Example:  "custom_script.sh"
+update_script_interpreter: interpreter of the script in case you are using a custom updater. Example: "/bin/bash"
+update_script_timeout: timeout for the script in case you are using a custom updater. Example: "20s"
+update_script_extra_arguments: extra arguments that you want to be passed to the updater script in case you are using a custom updater. Example: ["-a 1"]
+active_update_checker: name of a previously defined active update checker if used. Example: "dockerhub_fetcher"
+active_update_checker: name of a previously defined passive update checker if used. Example: "nats"
+repository: repository of the service in the format /:owner/:name for lookup on dockerhub or github. Example: "/library/mariadb"
+check_tag: name of the tag to check for updates, this is used to check for updates on github or dockerhub. Don't needed for passive checkers. Example: "latest"
+updater: previously defined updater configuration name. Example: "custom"
+```
 
 # Running on Docker
 Firstable, you can pull the image: `docker pull skycoin/updater` or you can build it yourself: `docker build . [your-image-name]`.
