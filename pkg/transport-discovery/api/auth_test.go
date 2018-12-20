@@ -7,7 +7,6 @@ import (
 
 	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/auth"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/mockstore"
@@ -18,8 +17,7 @@ var testPubKey, testSec = cipher.GenerateKeyPair()
 // validHeaders returns a valid set of headers
 func validHeaders(t *testing.T, payload []byte) http.Header {
 	nonce := store.Nonce(0)
-	sig, err := auth.Sign(payload, nonce, testSec)
-	require.NoError(t, err)
+	sig := auth.Sign(payload, nonce, testSec)
 
 	hdr := http.Header{}
 	hdr.Set("SW-Public", testPubKey.Hex())
@@ -75,8 +73,7 @@ func TestAuthSignatureVerification(t *testing.T) {
 	nonce := store.Nonce(0xdeadbeef)
 	payload := []byte("dead beed")
 
-	sig, err := auth.Sign(payload, nonce, testSec)
-	require.NoError(t, err)
+	sig := auth.Sign(payload, nonce, testSec)
 
 	auth := &Auth{
 		Key:   testPubKey,
@@ -85,5 +82,5 @@ func TestAuthSignatureVerification(t *testing.T) {
 	}
 
 	assert.NoError(t, auth.Verify([]byte(payload)))
-	assert.Error(t, auth.Verify([]byte("other payload")), ".Validate should return an error for this payload")
+	assert.Error(t, auth.Verify([]byte("other payload")), "Validate should return an error for this payload")
 }

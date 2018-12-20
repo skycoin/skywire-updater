@@ -13,8 +13,7 @@ func TestSignatureVerification(t *testing.T) {
 	payload := []byte("payload to sign")
 	nonce := store.Nonce(0xff)
 
-	sig, err := Sign(payload, nonce, sec)
-	require.NoError(t, err)
+	sig := Sign(payload, nonce, sec)
 	require.NoError(t, Verify(payload, nonce, pub, sig))
 	require.Error(t, Verify(payload, nonce+1, pub, sig))
 }
