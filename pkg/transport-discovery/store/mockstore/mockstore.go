@@ -2,122 +2,175 @@ package mockstore
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/skycoin/skycoin/src/cipher"
+	"github.com/watercompany/skywire-node/pkg/transport"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
-func newID() store.ID { return store.ID(time.Now().UnixNano()) }
-
 type Store struct {
-	idsMutex sync.Mutex
-	idsIndex map[store.ID]*store.Transport
-
-	edgesMutex sync.Mutex
-	edgesIndex map[string][]*store.Transport
-
-	noncesMutex sync.Mutex
-	noncesIndex map[string]store.Nonce
+	transports []*store.EntryWithStatus
+	nonces     map[cipher.PubKey]store.Nonce
 
 	err error
+	mu  sync.Mutex
 }
 
 var _ store.Store = &Store{}
 
 func NewStore() *Store {
 	return &Store{
-		idsIndex:    make(map[store.ID]*store.Transport),
-		edgesIndex:  make(map[string][]*store.Transport),
-		noncesIndex: make(map[string]store.Nonce),
+		transports: []*store.EntryWithStatus{},
+		nonces:     make(map[cipher.PubKey]store.Nonce),
 	}
 }
 
-func (s *Store) SetError(err error) { s.err = err }
+func (s *Store) SetError(err error) {
+	s.err = err
+}
 
-func (s *Store) RegisterTransport(_ context.Context, t *store.Transport) error {
+func (s *Store) RegisterTransport(_ context.Context, entry *transport.SignedEntry) error {
 	if s.err != nil {
 		return s.err
 	}
 
-	if t.ID == 0 {
-		t.ID = newID()
+	s.mu.Lock()
+	for _, e := range s.transports {
+		if e.Entry.ID == entry.Entry.ID {
+			return errors.New("ID already registered")
+		}
 	}
 
-	s.idsMutex.Lock()
-	s.idsIndex[t.ID] = t
-	s.idsMutex.Unlock()
+	s.transports = append(s.transports, &store.EntryWithStatus{
+		Entry:      entry.Entry,
+		IsUp:       true,
+		Registered: time.Now().Unix(),
+		Statuses:   [2]bool{true, true},
+	})
+	s.mu.Unlock()
 
-	s.edgesMutex.Lock()
-	for _, edge := range t.Edges {
-		key := edge.Hex()
-		s.edgesIndex[key] = append(s.edgesIndex[key], t)
-	}
-	s.edgesMutex.Unlock()
-
+	entry.Registered = time.Now().Unix()
 	return nil
 }
 
-func (s *Store) DeregisterTransport(ctx context.Context, ID store.ID) (*store.Transport, error) {
-	s.idsMutex.Lock()
-	defer s.idsMutex.Unlock()
-	t, err := s.getTransportByID(ctx, ID)
-	if err != nil {
-		return nil, err
+func (s *Store) DeregisterTransport(_ context.Context, id uuid.UUID) (*transport.Entry, error) {
+	if s.err != nil {
+		return nil, s.err
 	}
 
-	delete(s.idsIndex, ID)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for idx, entry := range s.transports {
+		if entry == nil {
+			continue
+		}
 
-	return t, nil
+		if entry.Entry.ID == id {
+			s.transports[idx] = nil
+			return entry.Entry, nil
+		}
+	}
 
+	return nil, errors.New("Transport not found")
 }
 
-func (s *Store) GetTransportByID(ctx context.Context, ID store.ID) (*store.Transport, error) {
-	s.idsMutex.Lock()
-	defer s.idsMutex.Unlock()
-	return s.getTransportByID(ctx, ID)
+func (s *Store) GetTransportByID(_ context.Context, id uuid.UUID) (*store.EntryWithStatus, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, entry := range s.transports {
+		if entry == nil {
+			continue
+		}
+
+		if entry.Entry.ID == id {
+			return entry, nil
+		}
+	}
+
+	return nil, errors.New("Transport not found")
 }
 
-func (s *Store) getTransportByID(_ context.Context, ID store.ID) (*store.Transport, error) {
-	t, ok := s.idsIndex[ID]
+func (s *Store) GetTransportsByEdge(_ context.Context, pk cipher.PubKey) ([]*store.EntryWithStatus, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	res := []*store.EntryWithStatus{}
+	for _, entry := range s.transports {
+		if entry == nil {
+			continue
+		}
+
+		if entry.Entry.Edges[0] == pk.Hex() || entry.Entry.Edges[1] == pk.Hex() {
+			res = append(res, entry)
+		}
+	}
+
+	return res, nil
+}
+
+func (s *Store) UpdateStatus(ctx context.Context, id uuid.UUID, isUp bool) (*store.EntryWithStatus, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+
+	pk, ok := ctx.Value("auth-pub-key").(cipher.PubKey)
 	if !ok {
-		return nil, store.ErrNotEnoughACKs
+		return nil, errors.New("invalid auth")
 	}
 
-	return t, nil
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, entry := range s.transports {
+		if entry == nil {
+			continue
+		}
+
+		if entry.Entry.ID == id {
+			idx := 0
+			if entry.Entry.Edges[1] == pk.Hex() {
+				idx = 1
+			}
+
+			entry.Statuses[idx] = isUp
+			entry.IsUp = entry.Statuses[0] && entry.Statuses[1]
+			return entry, nil
+		}
+	}
+
+	return nil, errors.New("Transport not found")
 }
 
-func (s *Store) GetTransportsByEdge(_ context.Context, pub cipher.PubKey) ([]*store.Transport, error) {
-	return nil, nil
-}
-
-func (s *Store) GetNonce(ctx context.Context, pub cipher.PubKey) (store.Nonce, error) {
+func (s *Store) GetNonce(ctx context.Context, pk cipher.PubKey) (store.Nonce, error) {
 	if s.err != nil {
 		return 0, s.err
 	}
 
-	s.noncesMutex.Lock()
-	defer s.noncesMutex.Unlock()
-	return s.getNonce(ctx, pub)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.nonces[pk], nil
 }
 
-func (s *Store) getNonce(_ context.Context, pub cipher.PubKey) (store.Nonce, error) {
-	return s.noncesIndex[pub.Hex()], nil
-}
+func (s *Store) IncrementNonce(ctx context.Context, pk cipher.PubKey) (store.Nonce, error) {
+	if s.err != nil {
+		return 0, s.err
+	}
 
-func (s *Store) setNonce(_ context.Context, pub cipher.PubKey, nonce store.Nonce) error {
-	s.noncesIndex[pub.Hex()] = nonce
-	return nil
-}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-func (s *Store) IncrementNonce(ctx context.Context, pub cipher.PubKey) (store.Nonce, error) {
-	s.noncesMutex.Lock()
-	defer s.noncesMutex.Unlock()
-
-	nonce, _ := s.getNonce(ctx, pub)
-	nonce++
-	s.setNonce(ctx, pub, nonce)
-	return nonce, nil
+	s.nonces[pk] = s.nonces[pk] + 1
+	return s.nonces[pk], nil
 }

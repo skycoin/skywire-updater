@@ -88,7 +88,7 @@ func (api *API) handleStatuses(w http.ResponseWriter, r *http.Request) (interfac
 
 	res := []*store.EntryWithStatus{}
 	for _, status := range statuses {
-		entry, err := api.store.UpdateStatus(r.Context(), uuid.UUID(status.ID), status.IsUp)
+		entry, err := api.store.UpdateStatus(r.Context(), status.ID, status.IsUp)
 		if err != nil {
 			return nil, err
 		}

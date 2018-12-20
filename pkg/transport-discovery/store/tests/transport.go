@@ -2,14 +2,14 @@ package tests
 
 import (
 	"context"
-	"sync"
 	"testing"
-	"time"
 
+	"github.com/google/uuid"
 	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/watercompany/skywire-node/pkg/transport"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
@@ -28,74 +28,65 @@ func (s *TransportSuite) TestRegister() {
 	pk1, _ := cipher.GenerateKeyPair()
 	pk2, _ := cipher.GenerateKeyPair()
 
-	var tr1 = &store.Transport{Edges: []cipher.PubKey{pk1, pk2}}
-	var tr2 = &store.Transport{Edges: []cipher.PubKey{pk2, pk1}}
+	sEntry := &transport.SignedEntry{
+		Entry: &transport.Entry{
+			ID:     uuid.New(),
+			Edges:  [2]string{pk1.Hex(), pk2.Hex()},
+			Type:   "messaging",
+			Public: true,
+		},
+		Signatures: [2]string{"foo", "bar"},
+	}
 
-	wg := sync.WaitGroup{}
-
-	// This goroutine represent the first node registering a transport
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		require.NoError(t, s.Store.RegisterTransport(ctx, tr1))
-	}()
-
-	// Simulate some delay between both nodes
-	time.Sleep(100 * time.Millisecond)
-
-	// This goroutine represent the second node registering a transport
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		require.NoError(t, s.Store.RegisterTransport(ctx, tr2))
-	}()
-
-	wg.Wait()
-	assert.Equal(t, tr1.ID, tr2.ID)
-
-	t.Run(".Registered has been set", func(t *testing.T) {
-		assert.Equal(t, tr1.Registered, tr2.Registered)
-		assert.False(t, tr1.Registered.IsZero(), "Can't be zero")
-		assert.True(t, time.Now().After(tr1.Registered))
+	t.Run(".RegisterTransport", func(t *testing.T) {
+		require.NoError(t, s.Store.RegisterTransport(ctx, sEntry))
+		assert.True(t, sEntry.Registered > 0)
 	})
 
 	t.Run(".GetTransportByID", func(t *testing.T) {
-		found, err := s.Store.GetTransportByID(ctx, tr1.ID)
+		found, err := s.Store.GetTransportByID(ctx, sEntry.Entry.ID)
 		require.NoError(t, err)
-		assert.Equal(t, tr1.ID, found.ID, "IDs should be equal")
-		assert.ElementsMatch(t, tr1.Edges, found.Edges, "Edges should contain the same PKs")
-		assert.True(t, len(tr1.Edges) == len(found.Edges))
-		assert.Equal(t, tr1.Registered, found.Registered)
+		assert.Equal(t, sEntry.Entry, found.Entry)
+		assert.True(t, found.IsUp)
 	})
 
 	t.Run(".GetTransportsByEdge", func(t *testing.T) {
-		var err error
-		var transports []*store.Transport
-
-		transports, err = s.Store.GetTransportsByEdge(ctx, pk1)
+		entries, err := s.Store.GetTransportsByEdge(ctx, pk1)
 		require.NoError(t, err)
-		assert.Len(t, transports, 1)
-		assert.Contains(t, transports[0].Edges, pk1)
+		require.Len(t, entries, 1)
+		assert.Equal(t, sEntry.Entry, entries[0].Entry)
+		assert.True(t, entries[0].IsUp)
 
-		transports, err = s.Store.GetTransportsByEdge(ctx, pk2)
+		entries, err = s.Store.GetTransportsByEdge(ctx, pk2)
 		require.NoError(t, err)
-		assert.Len(t, transports, 1)
-		assert.Contains(t, transports[0].Edges, pk2)
+		require.Len(t, entries, 1)
+		assert.Equal(t, sEntry.Entry, entries[0].Entry)
+		assert.True(t, entries[0].IsUp)
 
 		pk, _ := cipher.GenerateKeyPair()
-		transports, err = s.Store.GetTransportsByEdge(ctx, pk)
+		entries, err = s.Store.GetTransportsByEdge(ctx, pk)
 		require.NoError(t, err)
-		assert.Len(t, transports, 0)
+		require.Len(t, entries, 0)
+	})
+
+	t.Run(".UpdateStatus", func(t *testing.T) {
+		entry, err := s.Store.UpdateStatus(ctx, sEntry.Entry.ID, false)
+		require.Error(t, err)
+		assert.Equal(t, "invalid auth", err.Error())
+
+		entry, err = s.Store.UpdateStatus(context.WithValue(ctx, "auth-pub-key", pk1), sEntry.Entry.ID, false)
+		require.NoError(t, err)
+		assert.Equal(t, sEntry.Entry, entry.Entry)
+		assert.False(t, entry.IsUp)
 	})
 
 	t.Run(".DeregisterTransport", func(t *testing.T) {
-		return
-		trans, err := s.Store.DeregisterTransport(ctx, tr1.ID)
+		entry, err := s.Store.DeregisterTransport(ctx, sEntry.Entry.ID)
 		require.NoError(t, err)
-		assert.Equal(t, tr1, trans)
+		assert.Equal(t, sEntry.Entry, entry)
 
-		_, err = s.Store.GetTransportByID(ctx, tr1.ID)
+		_, err = s.Store.GetTransportByID(ctx, sEntry.Entry.ID)
 		require.Error(t, err)
-		assert.Equal(t, store.ErrNotEnoughACKs, err, "Can't be found after .DeregisterTransport")
+		assert.Equal(t, "Transport not found", err.Error())
 	})
 }
