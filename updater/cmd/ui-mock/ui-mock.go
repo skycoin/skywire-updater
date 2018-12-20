@@ -1,15 +1,16 @@
 package main
 
 import (
-	"net/http"
 	"context"
-	"net"
 	"encoding/json"
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"net"
+	"net/http"
+
 	"github.com/skycoin/skycoin/src/util/logging"
 	"github.com/watercompany/skywire-services/updater/pkg/checker"
-	"flag"
-	"io/ioutil"
-	"fmt"
 )
 
 var logger = logging.MustGetLogger("api")
@@ -17,16 +18,10 @@ var port string
 
 func main() {
 	flag.StringVar(&port, "port", "8989", "port where to listen")
-	err := NewServerGateway().Start(":"+port)
+	err := NewServerGateway().Start(":" + port)
 	if err != nil {
 		logger.Fatal(err)
 	}
-}
-
-// Gateway represents an API to communicate with the node
-type Gateway interface {
-	Start(string) error
-	Stop() error
 }
 
 // ServerGateway implements gateway interface for REST server
@@ -79,4 +74,3 @@ func (s *ServerGateway) Update(w http.ResponseWriter, r *http.Request) {
 	logger.Info("update notification")
 	logger.Info(msg)
 }
-

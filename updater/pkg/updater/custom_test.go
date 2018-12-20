@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/watercompany/skywire-services/updater/config"
+	"github.com/watercompany/skywire-services/updater/pkg/config"
 	"github.com/watercompany/skywire-services/updater/pkg/logger"
 	"github.com/watercompany/skywire-services/updater/pkg/updater"
 )
@@ -29,13 +29,13 @@ func TestCustom(t *testing.T) {
 		},
 		Services: map[string]config.ServiceConfig{
 			"myservice": {
-				LocalName:            "myservice",
-				OfficialName:         "myservice",
+				LocalName:                  "myservice",
+				OfficialName:               "myservice",
 				UpdateScriptInterpreter:    "/bin/bash",
-				UpdateScript:         "-s",
+				UpdateScript:               "-s",
 				UpdateScriptExtraArguments: []string{"<<<", testScript, "arg2"},
 				UpdateScriptTimeout:        "5s",
-				Updater:              "test",
+				Updater:                    "test",
 			},
 		},
 	}
@@ -56,11 +56,11 @@ func TestTimeout(t *testing.T) {
 		},
 		Services: map[string]config.ServiceConfig{
 			"myservice": {
-				LocalName:            "myservice",
-				OfficialName:         "myservice",
-				Updater:              "test",
+				LocalName:                  "myservice",
+				OfficialName:               "myservice",
+				Updater:                    "test",
 				UpdateScriptInterpreter:    "top",
-				UpdateScript:         "",
+				UpdateScript:               "",
 				UpdateScriptExtraArguments: []string{},
 				UpdateScriptTimeout:        "1s",
 			},

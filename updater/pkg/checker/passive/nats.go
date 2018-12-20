@@ -6,9 +6,9 @@ import (
 	gonats "github.com/nats-io/go-nats"
 	"github.com/sirupsen/logrus"
 
+	"github.com/watercompany/skywire-services/updater/pkg/checker"
 	"github.com/watercompany/skywire-services/updater/pkg/logger"
 	"github.com/watercompany/skywire-services/updater/pkg/updater"
-	"github.com/watercompany/skywire-services/updater/pkg/checker"
 )
 
 type nats struct {
@@ -17,12 +17,12 @@ type nats struct {
 	connection *gonats.Conn
 	closer     chan int
 	topic      string
-	notifyUrl string
+	notifyURL  string
 	log        *logger.Logger
 	sync.Mutex
 }
 
-func newNats(u updater.Updater, url string, notifyUrl string,log *logger.Logger) *nats {
+func newNats(u updater.Updater, url string, notifyURL string, log *logger.Logger) *nats {
 	connection, err := gonats.Connect(url)
 	if err != nil {
 		log.Fatal(err)
@@ -32,7 +32,7 @@ func newNats(u updater.Updater, url string, notifyUrl string,log *logger.Logger)
 		url:        url,
 		connection: connection,
 		closer:     make(chan int),
-		notifyUrl:  notifyUrl,
+		notifyURL:  notifyURL,
 		log:        log,
 	}
 }
@@ -44,7 +44,11 @@ func (n *nats) Subscribe(topic string) {
 }
 
 func (n *nats) Start() {
-	n.connection.Subscribe(n.topic, n.onUpdate)
+	_, err := n.connection.Subscribe(n.topic, n.onUpdate)
+	if err != nil {
+		panic(err)
+	}
+
 	n.log.Infof("subscribed to %s", n.topic)
 	<-n.closer
 	n.log.Info("stop")
@@ -56,7 +60,7 @@ func (n *nats) Stop() {
 
 func (n *nats) onUpdate(msg *gonats.Msg) {
 	n.log.Info("received update notification")
-	err := checker.NotifyUpdate(n.notifyUrl, msg.Subject, msg.Subject, msg.Subject, "token")
+	err := checker.NotifyUpdate(n.notifyURL, msg.Subject, msg.Subject, msg.Subject, "token")
 	if err != nil {
 		logrus.Fatal(err)
 	}

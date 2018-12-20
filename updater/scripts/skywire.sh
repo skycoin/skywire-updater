@@ -18,18 +18,6 @@ sshs_binary="${GOPATH}/pkg/github.com/skycoin/skywire/cmd/ssh/sshs"
 service_github_url="github.com/skycoin/skywire"
 binary_directory=${GOBIN}
 
-build_and_copy_if_different () {
-    cd $1
-    go build
-
-    if [[ -z $(diff ${GOBIN}/${2} ./${2}) ]]; then
-        echo "already up to date"
-        exit 0
-    fi
-
-    cp ${2} ${GOBIN}/${2}
-}
-
 build_and_copy () {
     cd $1
     go build
@@ -57,7 +45,7 @@ build_and_copy ${sockss_binary} "sockss"
 build_and_copy ${sshc_binary} "sshc"
 build_and_copy ${sshs_binary} "sshs"
 
-build_and_copy_if_different ${binary} ${process_name}
+build_and_copy ${binary} ${process_name}
 
 echo "updated"
 echo "restarting..."

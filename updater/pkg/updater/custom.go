@@ -7,11 +7,13 @@ import (
 	"github.com/go-cmd/cmd"
 	"github.com/sirupsen/logrus"
 
-	"github.com/watercompany/skywire-services/updater/config"
-	"github.com/watercompany/skywire-services/updater/pkg/logger"
 	"path/filepath"
 	"sync"
+
 	"errors"
+
+	"github.com/watercompany/skywire-services/updater/pkg/config"
+	"github.com/watercompany/skywire-services/updater/pkg/logger"
 )
 
 // This package implements a custom updater. This means, a script that would be launched upon
@@ -19,8 +21,12 @@ import (
 
 var defaultScriptTimeout = time.Minute * 10
 
-var ErrNoServiceWithThatName = errors.New("no service registered with that name")
+// Custom related errors
+var (
+	ErrNoServiceWithThatName = errors.New("no service registered with that name")
+)
 
+// Custom is an updater that runs an user-given custom script in order to update services
 type Custom struct {
 	services map[string]customServiceConfig
 	sync.RWMutex
@@ -38,7 +44,7 @@ type customServiceConfig struct {
 
 func newCustomUpdater(scriptsDirectory string, services map[string]config.ServiceConfig) *Custom {
 	customServices := make(map[string]customServiceConfig)
-	custom := &Custom{ services: customServices}
+	custom := &Custom{services: customServices}
 
 	for officialName, c := range services {
 		custom.RegisterService(c, officialName, scriptsDirectory)
@@ -49,6 +55,7 @@ func newCustomUpdater(scriptsDirectory string, services map[string]config.Servic
 	}
 }
 
+// RegisterService allows to register a new service to update
 func (c *Custom) RegisterService(conf config.ServiceConfig, officialName, scriptsDirectory string) {
 	c.Lock()
 	defer c.Unlock()
@@ -57,6 +64,7 @@ func (c *Custom) RegisterService(conf config.ServiceConfig, officialName, script
 	c.services[officialName] = customService
 }
 
+// UnregisterService allows to remove a service to update
 func (c *Custom) UnregisterService(officialName string) {
 	c.Lock()
 	defer c.Unlock()
@@ -90,11 +98,13 @@ func (c *Custom) parseServiceConfig(conf config.ServiceConfig, officialName, scr
 	}
 }
 
+// Update updates the given service
 func (c *Custom) Update(service, version string, log *logger.Logger) chan error {
 	errCh := make(chan error)
 	localService, ok := c.service(service)
 	if !ok {
-
+		errCh <- ErrNoServiceWithThatName
+		return errCh
 	}
 
 	customCmd, statusChan := createAndLaunch(localService, version, log)
@@ -145,7 +155,11 @@ func logStdout(ticker *time.Ticker, customCmd *cmd.Cmd, log *logger.Logger) {
 
 func timeoutCmd(service customServiceConfig, customCmd *cmd.Cmd, errCh chan error) {
 	<-time.After(service.scriptTimeout)
-	customCmd.Stop()
+	err := customCmd.Stop()
+	if err != nil {
+		errCh <- err
+		return
+	}
 	errCh <- fmt.Errorf("update script for service %s timed out", service.officialName)
 }
 

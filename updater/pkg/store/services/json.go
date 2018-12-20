@@ -10,38 +10,38 @@ import (
 )
 
 type jsonStore struct {
-	file string
+	file     string
 	services Services
 }
 
-func newJsonStore(file string) *jsonStore {
+func newJSONStore(file string) *jsonStore {
 	cleanFile := filepath.Clean(file)
 	createDirIfNotExists(cleanFile)
 
-	jsonFile, err := os.OpenFile(cleanFile, os.O_RDONLY|os.O_CREATE, 0744)
-	if err != nil{
-		logrus.Fatalf("unable to recreate state %s",err)
+	jsonFile, err := os.OpenFile(cleanFile, os.O_RDONLY|os.O_CREATE, 0600)
+	if err != nil {
+		logrus.Fatalf("unable to recreate state %s", err)
 	}
 
 	jsonBytes, err := ioutil.ReadAll(jsonFile)
-	if err != nil{
+	if err != nil {
 		logrus.Fatalf("unable to read %s. %s", file, err)
 	}
 
 	return &jsonStore{
-		file: file,
+		file:     file,
 		services: decodeServices(jsonBytes),
 	}
 }
 
-func (s *jsonStore) Get(service string) *Service{
+func (s *jsonStore) Get(service string) *Service {
 	return s.services.get(service)
 }
 
 func (s *jsonStore) Store(service *Service) {
 	logrus.Infof("writing status file %s", s.file)
 	s.services.set(service)
-	encoded, err := json.MarshalIndent(s.services,"","	 ")
+	encoded, err := json.MarshalIndent(s.services, "", "	 ")
 	if err != nil {
 		logrus.Fatalf("cannot encoded status to json %s", err)
 	}
@@ -52,10 +52,13 @@ func (s *jsonStore) Store(service *Service) {
 	}
 }
 
-func createDirIfNotExists(path string){
-	dir:= filepath.Dir(path)
+func createDirIfNotExists(path string) {
+	dir := filepath.Dir(path)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		os.Mkdir(dir, 0744)
+		err = os.Mkdir(dir, 0744)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -67,8 +70,8 @@ func decodeServices(jsonBytes []byte) Services {
 	}
 
 	err := json.Unmarshal(jsonBytes, &services)
-	if err != nil{
-		logrus.Fatalf("unable to decode json file %s",err)
+	if err != nil {
+		logrus.Fatalf("unable to decode json file %s", err)
 	}
 
 	return services

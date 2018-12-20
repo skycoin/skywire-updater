@@ -4,45 +4,46 @@ import (
 	"sync"
 	"time"
 
-	"github.com/watercompany/skywire-services/updater/config"
-	"github.com/watercompany/skywire-services/updater/pkg/logger"
-	"github.com/watercompany/skywire-services/updater/pkg/checker"
-	"github.com/go-cmd/cmd"
 	"fmt"
 	"path/filepath"
+
+	"github.com/go-cmd/cmd"
+	"github.com/watercompany/skywire-services/updater/pkg/checker"
+	"github.com/watercompany/skywire-services/updater/pkg/config"
+	"github.com/watercompany/skywire-services/updater/pkg/logger"
 )
 
 type naive struct {
-	// Url should be in the format /:owner/:Repository
-	service   string
-	localName string
-	url       string
-	interval  time.Duration
-	ticker    *time.Ticker
-	lock      sync.Mutex
-	exit      chan int
-	notifyUrl string
-	updateCheckScript string
-	scriptTimeout time.Duration
+	// URL should be in the format /:owner/:Repository
+	service              string
+	localName            string
+	url                  string
+	interval             time.Duration
+	ticker               *time.Ticker
+	lock                 sync.Mutex
+	exit                 chan int
+	notifyURL            string
+	updateCheckScript    string
+	scriptTimeout        time.Duration
 	scriptExtraArguments []string
-	scriptInterpreter string
-	log       *logger.Logger
+	scriptInterpreter    string
+	log                  *logger.Logger
 	config.CustomLock
 }
 
-func NewNaive(service, localName, url, notifyUrl, scriptInterpreter, updateCheckScript string,
+func newNaive(service, localName, url, notifyURL, scriptInterpreter, updateCheckScript string,
 	scriptExtraArguments []string, scriptTimeout time.Duration, log *logger.Logger) *naive {
 	return &naive{
-		url:       filepath.Join("github.com", url),
-		exit:      make(chan int),
-		service:   service,
-		localName: localName,
-		notifyUrl:	notifyUrl,
-		updateCheckScript: updateCheckScript,
-		scriptTimeout: scriptTimeout,
+		url:                  filepath.Join("github.com", url),
+		exit:                 make(chan int),
+		service:              service,
+		localName:            localName,
+		notifyURL:            notifyURL,
+		updateCheckScript:    updateCheckScript,
+		scriptTimeout:        scriptTimeout,
 		scriptExtraArguments: scriptExtraArguments,
-		scriptInterpreter: scriptInterpreter,
-		log:       log,
+		scriptInterpreter:    scriptInterpreter,
+		log:                  log,
 	}
 }
 
@@ -59,13 +60,10 @@ func (n *naive) SetInterval(t time.Duration) {
 func (n *naive) Start() {
 	n.ticker = time.NewTicker(n.interval)
 	go func() {
-		for {
-			select {
-			case t := <-n.ticker.C:
-				n.log.Info("looking for new version at: ", t)
-				// Try to fetch new version
-				go n.checkIfNew()
-			}
+		for t := range n.ticker.C {
+			n.log.Info("looking for new version at: ", t)
+			// Try to fetch new version
+			go n.checkIfNew()
 		}
 	}()
 	<-n.exit
@@ -77,20 +75,14 @@ func (n *naive) Stop() {
 }
 
 func (n *naive) checkIfNew() {
-	if n.IsLock() {
-		n.log.Warnf("service %s is already being updated... waiting for it to finish", n.service)
-	}
-	n.Lock()
-	defer n.Unlock()
-
-	n.log.Info("updating...")
+	n.log.Info("checking update...")
 
 	isUpdate, err := n.checkIfUpdate()
 	if err != nil {
 		n.log.Error(err)
 	}
 	if isUpdate {
-		err = checker.NotifyUpdate(n.notifyUrl, n.service, "master", "master", "token")
+		err = checker.NotifyUpdate(n.notifyURL, n.service, "master", "master", "token")
 		if err != nil {
 			n.log.Error(err)
 		}
@@ -103,7 +95,7 @@ func (n *naive) checkIfUpdate() (bool, error) {
 	var errCh = make(chan error)
 
 	customCmd, statusChan := createAndLaunch(n.localName, "master",
-		n.scriptInterpreter, n.updateCheckScript, n.service, n.url,  n.scriptExtraArguments, n.log)
+		n.scriptInterpreter, n.updateCheckScript, n.service, n.url, n.scriptExtraArguments, n.log)
 	ticker := time.NewTicker(time.Second * 2)
 
 	go logStdout(ticker, customCmd, n.log)
@@ -121,10 +113,7 @@ func createAndLaunch(localName, version, scriptInterpreter, script, service, url
 	return customCmd, statusChan
 }
 
-func buildCommand(localName, version,  script, service ,url string, arguments []string) []string {
-	fmt.Println("localName: ", localName)
-	fmt.Println("service: ", service)
-	fmt.Println("url: ", url)
+func buildCommand(localName, version, script, service, url string, arguments []string) []string {
 	command := []string{
 		script,
 		localName,
@@ -154,7 +143,11 @@ func logStdout(ticker *time.Ticker, customCmd *cmd.Cmd, log *logger.Logger) {
 
 func timeoutCmd(service string, timeout time.Duration, customCmd *cmd.Cmd, errCh chan error) {
 	<-time.After(timeout)
-	customCmd.Stop()
+	err := customCmd.Stop()
+	if err != nil {
+		errCh <- err
+		return
+	}
 	errCh <- fmt.Errorf("update script for service %s timed out", service)
 }
 
@@ -162,12 +155,12 @@ func waitForExit(statusChan <-chan cmd.Status, errCh chan error, log *logger.Log
 	for {
 		select {
 		case finalStatus := <-statusChan:
-			log.Infof("%s exit with: %d", finalStatus.Cmd, finalStatus.Exit)
 			if finalStatus.Exit != 0 {
 				return false, fmt.Errorf("exit with non-zero status %d", finalStatus.Exit)
 			}
+			log.Infof("check script ran and reported no error")
 			return true, nil
-		case err := <- errCh:
+		case err := <-errCh:
 			return false, err
 		}
 	}

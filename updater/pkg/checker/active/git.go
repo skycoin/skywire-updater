@@ -8,15 +8,15 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/watercompany/skywire-services/updater/config"
-	"github.com/watercompany/skywire-services/updater/pkg/logger"
-	"github.com/watercompany/skywire-services/updater/store/services"
 	"github.com/watercompany/skywire-services/updater/pkg/checker"
+	"github.com/watercompany/skywire-services/updater/pkg/config"
+	"github.com/watercompany/skywire-services/updater/pkg/logger"
+	"github.com/watercompany/skywire-services/updater/pkg/store/services"
 )
 
 type git struct {
-	// Url should be in the format /:owner/:Repository
-	notifyUrl string
+	// URL should be in the format /:owner/:Repository
+	notifyURL string
 	url       string
 	service   string
 	interval  time.Duration
@@ -29,14 +29,15 @@ type git struct {
 	config.CustomLock
 }
 
-func NewGit(service, url string, notifyUrl string, log *logger.Logger) *git {
+// newGit returns a new git fetcher
+func newGit(service, url string, notifyURL string, log *logger.Logger) *git {
 	retrievedStatus := services.GetStore().Get(service)
 	log.Infof("retrieved status %+v", retrievedStatus)
 	date := retrievedStatus.LastUpdated.Time
 
 	return &git{
 		url:       "https://api.github.com/repos" + url,
-		notifyUrl:	notifyUrl,
+		notifyURL: notifyURL,
 		tag:       "0.0.0",
 		date:      &date,
 		exit:      make(chan int),
@@ -66,13 +67,10 @@ func (g *git) SetInterval(t time.Duration) {
 func (g *git) Start() {
 	g.ticker = time.NewTicker(g.interval)
 	go func() {
-		for {
-			select {
-			case t := <-g.ticker.C:
-				g.log.Info("looking for new version at: ", t)
-				// Try to fetch new version
-				go g.checkIfNew()
-			}
+		for t := range g.ticker.C {
+			g.log.Info("looking for new version at: ", t)
+			// Try to fetch new version
+			go g.checkIfNew()
 		}
 	}()
 	<-g.exit
@@ -83,10 +81,10 @@ func (g *git) Stop() {
 	g.exit <- 1
 }
 
+// ReleaseJSON encodes a release object in github to fetch its information
 type ReleaseJSON struct {
-	Url string `json:"Url"`
-	//Name encodes the name of the release, or its version
-	Name        string `json:"Name"`
+	URL         string `json:"URL"`
+	Name        string `json:"Name"` // Name encodes the name of the release, or its version
 	PublishedAt string `json:"published_at"`
 }
 
@@ -101,10 +99,10 @@ func (g *git) checkIfNew() {
 	publishedTime := parsePublishedTime(release, g.log)
 
 	if g.date.Before(publishedTime) {
-		g.log.Info("new version: ", release.Url, ". Published at: ", release.PublishedAt)
+		g.log.Info("new version: ", release.URL, ". Published at: ", release.PublishedAt)
 
 		// request notify url
-		err := checker.NotifyUpdate(g.notifyUrl, g.service, g.tag, g.tag, "token")
+		err := checker.NotifyUpdate(g.notifyURL, g.service, g.tag, g.tag, "token")
 
 		if err != nil {
 			logrus.Error(err)
@@ -135,7 +133,6 @@ func (g *git) fetchGithubRelease() *ReleaseJSON {
 	return release
 }
 
-
 func parsePublishedTime(release *ReleaseJSON, log *logger.Logger) time.Time {
 	publishedTime, err := time.Parse(time.RFC3339, release.PublishedAt)
 	if err != nil {
@@ -143,7 +140,6 @@ func parsePublishedTime(release *ReleaseJSON, log *logger.Logger) time.Time {
 	}
 	return publishedTime
 }
-
 
 /*func (g *git) tryUpdate(release *ReleaseJSON) error {
 	for i := 0; i < g.retries; i++ {

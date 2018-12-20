@@ -33,5 +33,5 @@ func TestGet(t *testing.T) {
 
 	service := jsonStore.Get(serviceName)
 
-	assert.Equal(t,service.LastUpdated.Format(time.RFC3339), serviceLastUpdated)
+	assert.Equal(t, service.LastUpdated.Format(time.RFC3339), serviceLastUpdated)
 }

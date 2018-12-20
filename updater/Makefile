@@ -4,6 +4,10 @@ lint: ## Run linters. Use make install-linters first.
 	# The govet version in golangci-lint is out of date and has spurious warnings, run it separately
 	go vet -all ./...
 
+install:
+	mkdir -p ${HOME}/.skywire-updater
+	cp -r ./scripts ${HOME}/.skywire-updater/scripts
+
 install-linters: ## Install linters
 	go get -u github.com/FiloSottile/vendorcheck
 	# For some reason this install method is not recommended, see https://github.com/golangci/golangci-lint#install

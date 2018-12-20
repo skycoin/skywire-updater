@@ -13,14 +13,9 @@ binary="${GOPATH}/src/github.com/watercompany/skywire-messaging/cmd/${process_na
 service_github_url="github.com/watercompany/skywire-messaging"
 binary_directory=${GOBIN}
 
-build_and_copy_if_different () {
+build_and_copy() {
     cd $1
     go build
-
-    if [[ -z $(diff ${GOBIN}/${2} ./${2}) ]]; then
-        echo "already up to date"
-        exit 0
-    fi
 
     cp ${2} ${GOBIN}/${2}
 }
@@ -47,7 +42,7 @@ echo "fetched"
 
 echo "updating..."
 
-build_and_copy_if_different ${binary} ${process_name}
+build_and_copy${binary} ${process_name}
 
 echo "updated"
 echo "restarting..."

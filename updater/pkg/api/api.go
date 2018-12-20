@@ -1,15 +1,16 @@
 package api
 
 import (
-	"net/http"
-	"strings"
 	"context"
-	"net"
-	"net/url"
-	"github.com/watercompany/skywire-services/updater/pkg/supervisor"
-	"github.com/watercompany/skywire-services/updater/config"
 	"encoding/json"
+	"net"
+	"net/http"
+	"net/url"
+	"strings"
+
 	"github.com/skycoin/skycoin/src/util/logging"
+	"github.com/watercompany/skywire-services/updater/pkg/config"
+	"github.com/watercompany/skywire-services/updater/pkg/supervisor"
 )
 
 var logger = logging.MustGetLogger("api")
@@ -32,10 +33,11 @@ type HTTPError struct {
 	Code    int    `json:"code"`
 }
 
+// RegisterMessage represents t
 type RegisterMessage struct {
-	NotifyUrl string `json:"notify-url"`
+	NotifyURL      string `json:"notify-url"`
 	CurrentVersion string `json:"current-version"`
-	Repository string `json:"repository"`
+	Repository     string `json:"repository"`
 }
 
 // NewHTTPErrorResponse returns an HTTPResponse with the Error field populated
@@ -74,7 +76,7 @@ func (e ClientError) Error() string {
 
 // ServerGateway implements gateway interface for REST server
 type ServerGateway struct {
-	server *http.Server
+	server  *http.Server
 	starter *supervisor.Supervisor
 }
 
@@ -119,10 +121,9 @@ func (s *ServerGateway) Update(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError,
 			NewHTTPErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
-	} else {
-		writeJSON(w, http.StatusOK, HTTPResponse{Data:service + " updated"})
 	}
 
+	writeJSON(w, http.StatusOK, HTTPResponse{Data: service + " updated"})
 }
 
 // Register registers a new service into updater in order to look for new versions of it.
@@ -146,9 +147,8 @@ func (s *ServerGateway) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.starter.Register(service, registerMsg.Repository,
-		registerMsg.NotifyUrl, registerMsg.CurrentVersion)
+		registerMsg.NotifyURL, registerMsg.CurrentVersion)
 }
-
 
 // Unregister unregisters a service from updater, which will stop looking for new versions
 // URI: /register/:service_name
@@ -156,7 +156,12 @@ func (s *ServerGateway) Register(w http.ResponseWriter, r *http.Request) {
 func (s *ServerGateway) Unregister(w http.ResponseWriter, r *http.Request) {
 	service := retrieveServiceFromURL(r.URL)
 
-	s.starter.Unregister(service)
+	err := s.starter.Unregister(service)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError,
+			NewHTTPErrorResponse(http.StatusInternalServerError, err.Error()))
+		return
+	}
 
 	writeJSON(w, http.StatusOK, HTTPResponse{Data: service + " unregistered"})
 }

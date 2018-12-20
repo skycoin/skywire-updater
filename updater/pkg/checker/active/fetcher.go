@@ -3,27 +3,29 @@ package active
 import (
 	"time"
 
+	"github.com/watercompany/skywire-services/updater/pkg/config"
 	"github.com/watercompany/skywire-services/updater/pkg/logger"
-	"github.com/watercompany/skywire-services/updater/config"
 )
 
+// Fetcher represents an update available checker, which will fetch the information of such update every
+// given interval
 type Fetcher interface {
 	SetInterval(duration time.Duration)
 	Start()
 	Stop()
 }
 
-
-func New(kind, service, localName, repository, notifyUrl string, c config.ServiceConfig,
+// New returns a new Fetcher of the given kind type
+func New(kind, service, localName, repository, notifyURL string, c config.ServiceConfig,
 	scriptTimeout time.Duration, log *logger.Logger) Fetcher {
 
-		switch kind {
+	switch kind {
 	case "git":
-		return NewGit(service, repository, notifyUrl, log)
+		return newGit(service, repository, notifyURL, log)
 	case "naive":
-		return NewNaive(service, localName, repository, notifyUrl, c.CheckScriptInterpreter, c.CheckScript,
-			c.CheckScriptExtraArguments, scriptTimeout,log)
+		return newNaive(service, localName, repository, notifyURL, c.CheckScriptInterpreter, c.CheckScript,
+			c.CheckScriptExtraArguments, scriptTimeout, log)
 	}
-	return NewNaive(service, localName, repository, notifyUrl, c.CheckScriptInterpreter, c.CheckScript,
-		c.CheckScriptExtraArguments, scriptTimeout,log)
+	return newNaive(service, localName, repository, notifyURL, c.CheckScriptInterpreter, c.CheckScript,
+		c.CheckScriptExtraArguments, scriptTimeout, log)
 }

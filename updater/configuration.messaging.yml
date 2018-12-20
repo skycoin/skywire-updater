@@ -1,8 +1,8 @@
-scripts_directory: "/Users/ivan/Desktop/skycoin/src/github.com/watercompany/skywire-services/updater/pkg/updater/scripts/"
+scripts_directory: "$HOME/.skywire-updater/scripts"
 
 active_update_checkers:
   naive:
-    interval: "30s"
+    interval: "24h"
     notify_url: "http://localhost:8989/update"
     kind: "naive"
 
@@ -15,13 +15,42 @@ services:
     official_name: "skywire-messaging"
     local_name: "msgsrv"
     update_script: "skywire-messaging.sh"
-    check_script: "always_update.sh"
+    check_script: "generic-service-check-update.sh"
     check_script_interpreter: "/bin/bash"
     check_script_timeout: "20m"
     update_script_interpreter: "/bin/bash"
     update_script_timeout: "20m"
     update_script_extra_arguments:
-      - "msgsrv -c localhost:9094 -a localhost:8084 -s test-server"
+      - "-c localhost:9094 -a localhost:8084 -s test-server"
+    active_update_checker: "naive"
+    repository: "/watercompany/messaging"
+    updater: "custom"
+
+  skywire-messaging-client:
+    official_name: "skywire-messaging"
+    local_name: "simple-client"
+    update_script: "skywire-messaging.sh"
+    check_script: "generic-service-check-update.sh"
+    check_script_interpreter: "/bin/bash"
+    check_script_timeout: "20m"
+    update_script_interpreter: "/bin/bash"
+    update_script_timeout: "20m"
+    update_script_extra_arguments:
+    active_update_checker: "naive"
+    repository: "/watercompany/messaging"
+    updater: "custom"
+
+  skywire-messaging-discovery:
+    official_name: "skywire-messaging"
+    local_name: "msgdiscovery"
+    update_script: "skywire-messaging.sh"
+    check_script: "generic-service-check-update.sh"
+    check_script_interpreter: "/bin/bash"
+    check_script_timeout: "20m"
+    update_script_interpreter: "/bin/bash"
+    update_script_timeout: "20m"
+    update_script_extra_arguments:
+      - "-p 9090"
     active_update_checker: "naive"
     repository: "/watercompany/messaging"
     updater: "custom"

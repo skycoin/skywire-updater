@@ -5,39 +5,42 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/watercompany/skywire-services/updater/config"
-	"github.com/watercompany/skywire-services/updater/pkg/checker/active"
-	"github.com/watercompany/skywire-services/updater/pkg/checker/passive"
-	"github.com/watercompany/skywire-services/updater/pkg/updater"
-	loggerPkg "github.com/watercompany/skywire-services/updater/pkg/logger"
-	"github.com/watercompany/skywire-services/updater/store/services"
-	"github.com/pkg/errors"
-	"github.com/skycoin/skycoin/src/util/logging"
-	"sync"
 	"fmt"
 	"path/filepath"
+	"sync"
+
+	"errors"
+
+	"github.com/skycoin/skycoin/src/util/logging"
+	"github.com/watercompany/skywire-services/updater/pkg/checker/active"
+	"github.com/watercompany/skywire-services/updater/pkg/checker/passive"
+	"github.com/watercompany/skywire-services/updater/pkg/config"
+	loggerPkg "github.com/watercompany/skywire-services/updater/pkg/logger"
+	"github.com/watercompany/skywire-services/updater/pkg/store/services"
+	"github.com/watercompany/skywire-services/updater/pkg/updater"
 )
 
+// supervisor errors
 var (
-	logger = logging.MustGetLogger("updater")
+	logger             = logging.MustGetLogger("updater")
 	ErrServiceNotFound = errors.New("service definition not found")
 )
 
 var defaultSubscriptorConfig = struct {
-	kind string
+	kind     string
 	interval time.Duration
 }{
-	kind: "naive",
+	kind:     "naive",
 	interval: 20 * time.Second,
 }
 
+// Supervisor is responsible for spawning fetchers and updaters as well as to allow to modify or update
+// updater defined services
 type Supervisor struct {
 	activeCheckers  map[string]active.Fetcher
 	passiveCheckers map[string]passive.Subscriber
 	updaters        map[string]updater.Updater
-	defaultFetcherConfig active.Fetcher
-	defaultService updater.Updater
-	config *config.Configuration
+	config          *config.Configuration
 	sync.RWMutex
 }
 
@@ -45,22 +48,23 @@ func (s *Supervisor) registerChecker(service string, checker active.Fetcher) {
 	s.Lock()
 	defer s.Unlock()
 
-	s.activeCheckers[fmt.Sprintf("%s-checker",service)] = checker
+	s.activeCheckers[fmt.Sprintf("%s-checker", service)] = checker
 }
 
 func (s *Supervisor) unregisterChecker(service string) {
 	s.Lock()
 	defer s.Unlock()
 
-	delete(s.activeCheckers, fmt.Sprintf("%s-checker",service))
+	delete(s.activeCheckers, fmt.Sprintf("%s-checker", service))
 }
 
+// New returns a supervisor with the given configuration
 func New(conf *config.Configuration) *Supervisor {
 	s := &Supervisor{
 		activeCheckers:  map[string]active.Fetcher{},
 		passiveCheckers: map[string]passive.Subscriber{},
 		updaters:        map[string]updater.Updater{},
-		config: conf,
+		config:          conf,
 	}
 
 	services.InitStorer("json")
@@ -71,27 +75,29 @@ func New(conf *config.Configuration) *Supervisor {
 	return s
 }
 
-func (s *Supervisor) Register(service, url, notifyUrl, version string) {
+// Register registers a new service to fetch its updates from url, which current version is the given version
+// and that on a new update will send a POST request to notifyURL
+func (s *Supervisor) Register(service, url, notifyURL, version string) {
 	serviceConfig := config.ServiceConfig{
-		Repository: url,
-		UpdateScriptInterpreter: "/bin/bash",
-		LocalName: service,
-		OfficialName: service,
+		Repository:                 url,
+		UpdateScriptInterpreter:    "/bin/bash",
+		LocalName:                  service,
+		OfficialName:               service,
 		UpdateScriptExtraArguments: []string{service, url},
-		UpdateScript: "generic-service.sh",
-		UpdateScriptTimeout: "6m",
-		CheckScriptExtraArguments: []string{service, url},
-		CheckScript: filepath.Join(s.config.ScriptsDirectory, "generic-service-check-update.sh"),
-		CheckScriptTimeout: "6m",
-		Updater: "default",
-		CheckTag: "master",
+		UpdateScript:               "generic-service.sh",
+		UpdateScriptTimeout:        "6m",
+		CheckScriptExtraArguments:  []string{service, url},
+		CheckScript:                filepath.Join(s.config.ScriptsDirectory, "generic-service-check-update.sh"),
+		CheckScriptTimeout:         "6m",
+		Updater:                    "default",
+		CheckTag:                   "master",
 	}
 
 	s.updaters["default"].RegisterService(serviceConfig, service, s.config.ScriptsDirectory)
 	s.config.SubscribeService(service, serviceConfig)
 
 	checker := active.New(defaultSubscriptorConfig.kind,
-		service, service,serviceConfig.Repository, notifyUrl, serviceConfig,
+		service, service, serviceConfig.Repository, notifyURL, serviceConfig,
 		time.Minute*6, loggerPkg.NewLogger(service))
 	s.registerChecker(service, checker)
 
@@ -100,6 +106,7 @@ func (s *Supervisor) Register(service, url, notifyUrl, version string) {
 
 }
 
+// Unregister removes the given service from updater, so it won't look for new updates for it
 func (s *Supervisor) Unregister(service string) error {
 	s.unregisterChecker(service)
 	serviceConfig, ok := s.config.Services[service]
@@ -111,6 +118,7 @@ func (s *Supervisor) Unregister(service string) error {
 	return nil
 }
 
+// Start spawns the checkers and updaters
 func (s *Supervisor) Start() {
 	for _, checker := range s.activeCheckers {
 		go checker.Start()
@@ -121,6 +129,7 @@ func (s *Supervisor) Start() {
 	}
 }
 
+// Stop stops checkers and updaters
 func (s *Supervisor) Stop() {
 	for _, checker := range s.activeCheckers {
 		checker.Stop()
@@ -131,8 +140,9 @@ func (s *Supervisor) Stop() {
 	}
 }
 
+// Update updates the given service
 func (s *Supervisor) Update(service string) error {
-	logger.Infof("services: %+v\n",s.config.Services)
+	logger.Infof("services: %+v\n", s.config.Services)
 
 	logger.Infof("updaters: %+v\n", s.updaters)
 
@@ -145,7 +155,7 @@ func (s *Supervisor) Update(service string) error {
 	updaterInstance := s.updaters[serviceConfig.Updater]
 
 	// Try update
-	err := <- updaterInstance.Update(service, serviceConfig.CheckTag, loggerPkg.NewLogger(service))
+	err := <-updaterInstance.Update(service, serviceConfig.CheckTag, loggerPkg.NewLogger(service))
 	if err != nil {
 		return err
 	}
@@ -208,7 +218,7 @@ func (s *Supervisor) registerActiveChecker(conf *config.Configuration, c config.
 	fmt.Printf("service config: %+v\n", c)
 
 	c.CheckScript = filepath.Join(conf.ScriptsDirectory, c.CheckScript)
-	checker := active.New(fc.Kind, name, c.LocalName, c.Repository, fc.NotifyUrl, c, checkTimeout, log)
+	checker := active.New(fc.Kind, name, c.LocalName, c.Repository, fc.NotifyURL, c, checkTimeout, log)
 	checker.SetInterval(interval)
 	s.activeCheckers[name] = checker
 }
