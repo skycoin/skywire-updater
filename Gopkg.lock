@@ -14,19 +14,25 @@
   revision = "2492fe189ae688d7edbeae0fd575de2f1c5fec8e"
 
 [[projects]]
+  name = "github.com/go-redis/redis"
+  packages = [
+    ".",
+    "internal",
+    "internal/consistenthash",
+    "internal/hashtag",
+    "internal/pool",
+    "internal/proto",
+    "internal/singleflight",
+    "internal/util"
+  ]
+  revision = "b3d9bf10f6666b2ee5100a6f3f84f4caf3b4e37d"
+  version = "v6.14.2"
+
+[[projects]]
   name = "github.com/google/uuid"
   packages = ["."]
   revision = "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
   version = "v1.1.0"
-
-[[projects]]
-  name = "github.com/lib/pq"
-  packages = [
-    ".",
-    "oid"
-  ]
-  revision = "4ded0e9383f75c197b3a2aaa6d590ac52df6fd79"
-  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -63,19 +69,13 @@
   version = "v1.20.0"
 
 [[projects]]
-  branch = "feature/transport-manager"
+  branch = "master"
   name = "github.com/watercompany/skywire-node"
   packages = [
     "internal/dh",
     "pkg/transport"
   ]
-  revision = "e61365ccc66cfc768893198abfaac8c55c56e246"
-
-[[projects]]
-  name = "go.etcd.io/bbolt"
-  packages = ["."]
-  revision = "583e8937c61f1af6513608ccc75c97b6abdf4ff9"
-  version = "v1.3.0"
+  revision = "9344ef1fe27504ca08f7d264b751d2d792e03b6f"
 
 [[projects]]
   branch = "master"
@@ -94,15 +94,12 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = [
-    "cpu",
-    "unix"
-  ]
+  packages = ["cpu"]
   revision = "b00e65af1da0681cde6c8227839a0ca53bbf16bb"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5d2904083a5c4250d79dbdf10f2df52296e69695478f69535be83bad544688c4"
+  inputs-digest = "4eb2fa50ff513422cafec28d00e9bbc7fbc06f4cee63724d4632ab81c4bc8d9e"
   solver-name = "gps-cdcl"
   solver-version = 1

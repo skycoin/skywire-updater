@@ -45,3 +45,19 @@ type SignedEntry struct {
 	Signatures [2]string `json:"signatures"`
 	Registered int64     `json:"registered,omitempty"`
 }
+
+// Status represents the current state of a Transport from the perspective
+// from a Transport's single edge. Each Transport will have two perspectives;
+// one from each of it's edges.
+type Status struct {
+
+	// ID is the Transport ID that identifies the Transport that this status is regarding.
+	ID uuid.UUID `json:"t_id"`
+
+	// IsUp represents whether the Transport is up.
+	// A Transport that is down will fail to forward Packets.
+	IsUp bool `json:"is_up"`
+
+	// Updated is the epoch timestamp of when the status is last updated.
+	Updated int64 `json:"updated,omitempty"`
+}

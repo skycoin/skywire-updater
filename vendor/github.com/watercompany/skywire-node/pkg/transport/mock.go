@@ -3,7 +3,7 @@ package transport
 import (
 	"context"
 	"io"
-	"net"
+	"sync"
 	"time"
 
 	"errors"
@@ -11,73 +11,144 @@ import (
 	"github.com/skycoin/skycoin/src/cipher"
 )
 
-type fConn struct {
-	net.Conn
-	cipher.PubKey
+// errors from mock transport
+var (
+	ErrPKNotRegistered = errors.New("transport with this public key is not registered")
+)
+
+type pipes struct {
+	static cipher.PubKey
+	reader *io.PipeReader
+	notify chan *pipes
 }
 
-// MockFactory implements Factory over net.Pipe connections.
-type MockFactory struct {
-	local    cipher.PubKey
-	connChan chan *fConn
+func newPipes(pk cipher.PubKey, reader *io.PipeReader) *pipes {
+	return &pipes{
+		static: pk,
+		reader: reader,
+		notify: make(chan *pipes),
+	}
 }
 
-// NewMockFactory constructs a pair of MockFactories.
-func NewMockFactory(local, remote cipher.PubKey) (*MockFactory, *MockFactory) {
-	connChan := make(chan *fConn)
-	return &MockFactory{local, connChan}, &MockFactory{remote, connChan}
+type pipeDeliverer struct {
+	pipes map[cipher.PubKey]*pipes
+	sync.RWMutex
 }
 
-// Accept waits for new net.Conn notification from another MockFactory.
-func (f *MockFactory) Accept(ctx context.Context) (Transport, error) {
-	conn, more := <-f.connChan
-	if !more {
-		return nil, errors.New("factory: closed")
+// nolint used in tests
+func newPipeDeliverer() *pipeDeliverer {
+	return &pipeDeliverer{
+		pipes: make(map[cipher.PubKey]*pipes),
+	}
+}
+
+func (p *pipeDeliverer) RegisterAndBlock(pk cipher.PubKey, reader *io.PipeReader) *pipes {
+	pipes := newPipes(pk, reader)
+	p.Lock()
+	p.pipes[pk] = pipes
+	p.Unlock()
+
+	return <-pipes.notify
+}
+
+func (p *pipeDeliverer) Lookup(pk cipher.PubKey, reader *io.PipeReader) (*io.PipeReader, error) {
+	p.RLock()
+	pipe, ok := p.pipes[pk]
+	p.RUnlock()
+
+	if !ok {
+		return nil, ErrPKNotRegistered
 	}
 
-	return NewMockTransport(conn, f.local, conn.PubKey), nil
+	p.Lock()
+	delete(p.pipes, pk)
+	p.Unlock()
+
+	pipe.notify <- newPipes(pk, reader)
+
+	return pipe.reader, nil
 }
 
-// Dial creates pair of net.Conn via net.Pipe and passes one end to another MockFactory.
-func (f *MockFactory) Dial(ctx context.Context, remote cipher.PubKey) (Transport, error) {
-	in, out := net.Pipe()
-	f.connChan <- &fConn{in, f.local}
-	return NewMockTransport(out, f.local, remote), nil
+// pipeFactory spans transports that communicate trhoug io.PipeReader and io.PipeWriter
+type pipeFactory struct {
+	pipeDeliverer *pipeDeliverer
+	staticSecret  cipher.SecKey
+	staticPublic  cipher.PubKey
+	writer        *io.PipeWriter
+	reader        *io.PipeReader
 }
 
-// Close closes notification channel between a pair of MockFactories.
-func (f *MockFactory) Close() error {
-	select {
-	case <-f.connChan:
-	default:
-		close(f.connChan)
+// nolint used in tests
+func newPipeFactory(sk cipher.SecKey, deliverer *pipeDeliverer) *pipeFactory {
+	reader, writer := io.Pipe()
+
+	return &pipeFactory{
+		pipeDeliverer: deliverer,
+		staticSecret:  sk,
+		staticPublic:  cipher.PubKeyFromSecKey(sk),
+		reader:        reader,
+		writer:        writer,
 	}
+}
+
+// Accept accepts a remotely-initiated Transport.
+func (p *pipeFactory) Accept(ctx context.Context) (Transport, error) {
+	remotePipes := p.pipeDeliverer.RegisterAndBlock(p.staticPublic, p.reader)
+
+	return NewMockTransport(p.staticSecret, remotePipes.static,
+		p.writer, remotePipes.reader), nil
+}
+
+// Dial initiates a Transport with a remote node.
+func (p *pipeFactory) Dial(ctx context.Context, remote cipher.PubKey) (Transport, error) {
+	remoteReader, err := p.pipeDeliverer.Lookup(remote, p.reader)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewMockTransport(p.staticSecret, remote, p.writer, remoteReader), nil
+}
+
+// Close implements closer
+func (p *pipeFactory) Close() error {
+	p.reader.Close()
+	p.writer.Close()
+
 	return nil
 }
 
-// Local returns a local PubKey of the Factory.
-func (f *MockFactory) Local() cipher.PubKey {
-	return f.local
+// Local returns the local public key.
+func (p *pipeFactory) Local() cipher.PubKey {
+	return p.staticPublic
 }
 
-// Type returns type of the Factory.
-func (f *MockFactory) Type() string {
-	return "mock"
+// Type returns the Transport type.
+func (p *pipeFactory) Type() string {
+	return "pipe"
 }
 
 // MockTransport is a transport that accepts custom writers and readers to use them in Read and Write
 // operations
 type MockTransport struct {
-	rw      io.ReadWriteCloser
-	local   cipher.PubKey
+	writer  io.Writer
+	reader  io.Reader
+	pk      cipher.PubKey
+	sk      cipher.SecKey
 	remote  cipher.PubKey
 	context context.Context
 }
 
 // NewMockTransport creates a transport with the given secret key and remote public key, taking a writer
 // and a reader that will be used in the Write and Read operation
-func NewMockTransport(rw io.ReadWriteCloser, local, remote cipher.PubKey) *MockTransport {
-	return &MockTransport{rw, local, remote, context.Background()}
+func NewMockTransport(sk cipher.SecKey, remote cipher.PubKey, writer io.Writer, reader io.Reader) *MockTransport {
+	return &MockTransport{
+		writer:  writer,
+		reader:  reader,
+		pk:      cipher.PubKeyFromSecKey(sk),
+		sk:      sk,
+		remote:  remote,
+		context: context.Background(),
+	}
 }
 
 // Read implements reader for mock transport
@@ -86,8 +157,7 @@ func (m *MockTransport) Read(p []byte) (n int, err error) {
 	case <-m.context.Done():
 		return 0, ErrTransportCommunicationTimeout
 	default:
-
-		return m.rw.Read(p)
+		return m.reader.Read(p)
 	}
 }
 
@@ -97,18 +167,18 @@ func (m *MockTransport) Write(p []byte) (n int, err error) {
 	case <-m.context.Done():
 		return 0, ErrTransportCommunicationTimeout
 	default:
-		return m.rw.Write(p)
+		return m.writer.Write(p)
 	}
 }
 
 // Close implements closer for mock transport
 func (m *MockTransport) Close() error {
-	return m.rw.Close()
+	return nil
 }
 
 // Local returns the local static public key
 func (m *MockTransport) Local() cipher.PubKey {
-	return m.local
+	return m.pk
 }
 
 // Remote returns the remote public key fo the mock transport

@@ -30,10 +30,6 @@
   version = "1.1.0"
 
 [[constraint]]
-  name = "github.com/lib/pq"
-  version = "1.0.0"
-
-[[constraint]]
   name = "github.com/skycoin/skycoin"
   version = "0.24.1"
 
@@ -46,7 +42,7 @@
   version = "1.20.0"
 
 [[constraint]]
-  branch = "feature/transport-manager"
+  branch = "master"
   name = "github.com/watercompany/skywire-node"
 
 [prune]
