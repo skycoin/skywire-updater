@@ -25,10 +25,10 @@ var serve = cli.Command{
 	Usage: "Starts the server",
 	Flags: []cli.Flag{
 		cli.StringFlag{Name: "bind", Value: ":8080", Usage: "Where to bind to"},
-		cli.StringFlag{Name: "db", Value: "user=postgres database=transports disablessl=true", Usage: "Postgres connection string for the transport database"},
+		cli.StringFlag{Name: "db", Value: "redis://localhost:6379", Usage: "Redis URL"},
 	},
 	Action: func(c *cli.Context) error {
-		s, err := store.New("memory")
+		s, err := store.New("redis", c.String("db"))
 		if err != nil {
 			return err
 		}

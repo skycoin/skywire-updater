@@ -23,10 +23,9 @@ var testPubKey, testSecKey = cipher.GenerateKeyPair()
 
 func newTestEntry() *transport.Entry {
 	pk1, _ := cipher.GenerateKeyPair()
-	pk2, _ := cipher.GenerateKeyPair()
 	return &transport.Entry{
 		ID:     uuid.New(),
-		Edges:  [2]string{pk1.Hex(), pk2.Hex()},
+		Edges:  [2]string{pk1.Hex(), testPubKey.Hex()},
 		Type:   "messaging",
 		Public: true,
 	}

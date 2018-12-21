@@ -13,6 +13,12 @@ import (
 var (
 	// ErrNotEnoughACKs means that we're still waiting for a node to confirm the transport registration
 	ErrNotEnoughACKs = errors.New("Not enough ACKs")
+
+	// ErrAlreadyRegistered indicates that transport ID is already in use.
+	ErrAlreadyRegistered = errors.New("ID already registered")
+
+	// ErrTransportNotFound indicates that requested transport is not registered.
+	ErrTransportNotFound = errors.New("Transport not found")
 )
 
 // Nonce is used to sign requests in order to avoid replay attack
@@ -49,7 +55,13 @@ type NonceStore interface {
 func New(sType string, args ...string) (Store, error) {
 	switch sType {
 	case "memory":
-		return NewMemoryStore(), nil
+		return newMemoryStore(), nil
+	case "redis":
+		if len(args) != 1 {
+			return nil, errors.New("invalid args")
+		}
+
+		return newRedisStore(args[0])
 	default:
 		return nil, errors.New("unknown store type")
 	}

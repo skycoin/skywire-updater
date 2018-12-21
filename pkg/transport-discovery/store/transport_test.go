@@ -40,6 +40,8 @@ func (s *TransportSuite) TestRegister() {
 	t.Run(".RegisterTransport", func(t *testing.T) {
 		require.NoError(t, s.RegisterTransport(ctx, sEntry))
 		assert.True(t, sEntry.Registered > 0)
+
+		assert.Equal(t, ErrAlreadyRegistered, s.RegisterTransport(ctx, sEntry))
 	})
 
 	t.Run(".GetTransportByID", func(t *testing.T) {
@@ -64,8 +66,7 @@ func (s *TransportSuite) TestRegister() {
 
 		pk, _ := cipher.GenerateKeyPair()
 		entries, err = s.GetTransportsByEdge(ctx, pk)
-		require.NoError(t, err)
-		require.Len(t, entries, 0)
+		require.Error(t, err)
 	})
 
 	t.Run(".UpdateStatus", func(t *testing.T) {
