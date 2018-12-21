@@ -7,19 +7,16 @@ import (
 
 	"github.com/skycoin/skycoin/src/cipher"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/auth"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
-	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/mockstore"
 )
 
 var testPubKey, testSec = cipher.GenerateKeyPair()
 
 // validHeaders returns a valid set of headers
-func validHeaders(t *testing.T, payload []byte) http.Header {
+func validHeaders(payload []byte) http.Header {
 	nonce := store.Nonce(0)
-	sig, err := auth.Sign(payload, nonce, testSec)
-	require.NoError(t, err)
+	sig := auth.Sign(payload, nonce, testSec)
 
 	hdr := http.Header{}
 	hdr.Set("SW-Public", testPubKey.Hex())
@@ -30,15 +27,15 @@ func validHeaders(t *testing.T, payload []byte) http.Header {
 }
 
 func TestAuthFromHeaders(t *testing.T) {
-	mock := mockstore.NewStore()
+	mock, _ := store.New("memory") // nolint
 
-	api := New(mock, APIOptions{})
+	api := New(mock, Options{})
 
 	t.Run("Valid", func(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("POST", "/entries", nil)
-		r.Header = validHeaders(t, nil)
+		r.Header = validHeaders(nil)
 
 		api.ServeHTTP(w, r)
 
@@ -50,7 +47,7 @@ func TestAuthFormat(t *testing.T) {
 	headers := []string{"SW-Public", "SW-Sig", "SW-Nonce"}
 	for _, header := range headers {
 		t.Run(header+"-IsMissing", func(t *testing.T) {
-			hdr := validHeaders(t, nil)
+			hdr := validHeaders(nil)
 			hdr.Del(header)
 
 			_, err := authFromHeaders(hdr)
@@ -61,7 +58,7 @@ func TestAuthFormat(t *testing.T) {
 
 	t.Run("NonceFormat", func(t *testing.T) {
 		nonces := []string{"not_a_number", "-1", "0x0"}
-		hdr := validHeaders(t, nil)
+		hdr := validHeaders(nil)
 		for _, n := range nonces {
 			hdr.Set("SW-Nonce", n)
 			_, err := authFromHeaders(hdr)
@@ -75,8 +72,7 @@ func TestAuthSignatureVerification(t *testing.T) {
 	nonce := store.Nonce(0xdeadbeef)
 	payload := []byte("dead beed")
 
-	sig, err := auth.Sign(payload, nonce, testSec)
-	require.NoError(t, err)
+	sig := auth.Sign(payload, nonce, testSec)
 
 	auth := &Auth{
 		Key:   testPubKey,
@@ -85,5 +81,5 @@ func TestAuthSignatureVerification(t *testing.T) {
 	}
 
 	assert.NoError(t, auth.Verify([]byte(payload)))
-	assert.Error(t, auth.Verify([]byte("other payload")), ".Validate should return an error for this payload")
+	assert.Error(t, auth.Verify([]byte("other payload")), "Validate should return an error for this payload")
 }

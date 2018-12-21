@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net"
 	"net/http"
@@ -9,8 +8,6 @@ import (
 	"github.com/urfave/cli"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/api"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
-	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/memory"
-	"github.com/watercompany/skywire-services/pkg/transport-discovery/store/sql"
 )
 
 func main() {
@@ -20,7 +17,7 @@ func main() {
 		serve,
 	}
 
-	app.RunAndExitOnError()
+	app.RunAndExitOnError() // nolint
 }
 
 var serve = cli.Command{
@@ -28,24 +25,13 @@ var serve = cli.Command{
 	Usage: "Starts the server",
 	Flags: []cli.Flag{
 		cli.StringFlag{Name: "bind", Value: ":8080", Usage: "Where to bind to"},
-		cli.StringFlag{Name: "db", Value: "user=postgres database=transports disablessl=true", Usage: "Postgres connection string for the transport database"},
+		cli.StringFlag{Name: "db", Value: "redis://localhost:6379", Usage: "Redis URL"},
 	},
 	Action: func(c *cli.Context) error {
-		tdb, err := sql.NewStore(c.String("db"))
+		s, err := store.New("redis", c.String("db"))
 		if err != nil {
 			return err
 		}
-		defer tdb.Close()
-		if err := tdb.Migrate(context.Background()); err != nil {
-			return err
-		}
-
-		ndb := memory.NewStore()
-
-		s := struct {
-			store.TransportStore
-			store.NonceStore
-		}{tdb, ndb}
 
 		l, err := net.Listen("tcp", c.String("bind"))
 		if err != nil {
@@ -53,6 +39,6 @@ var serve = cli.Command{
 		}
 		log.Printf("Listening on %s", l.Addr().String())
 
-		return http.Serve(l, api.New(s, api.APIOptions{}))
+		return http.Serve(l, api.New(s, api.Options{}))
 	},
 }

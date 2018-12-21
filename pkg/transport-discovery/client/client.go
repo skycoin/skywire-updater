@@ -13,12 +13,23 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/skycoin/skycoin/src/cipher"
+	"github.com/watercompany/skywire-node/pkg/transport"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/api"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
-type Client struct {
+// Client performs Transport discovery operations.
+type Client interface {
+	RegisterTransports(ctx context.Context, entries ...*transport.SignedEntry) error
+	GetTransportByID(ctx context.Context, id uuid.UUID) (*store.EntryWithStatus, error)
+	GetTransportsByEdge(ctx context.Context, pk cipher.PubKey) ([]*store.EntryWithStatus, error)
+	UpdateStatuses(ctx context.Context, statuses ...*transport.Status) ([]*store.EntryWithStatus, error)
+}
+
+// APIClient implements Client for discovery API.
+type APIClient struct {
 	addr   string
 	client http.Client
 	key    cipher.PubKey
@@ -26,6 +37,10 @@ type Client struct {
 }
 
 func sanitizedAddr(addr string) string {
+	if addr == "" {
+		return "http://localhost"
+	}
+
 	u, err := url.Parse(addr)
 	if err != nil {
 		return "http://localhost"
@@ -39,14 +54,9 @@ func sanitizedAddr(addr string) string {
 	return u.String()
 }
 
-// Creates a new client instance.
-func New(addr string) *Client {
-	// Sanitize addr
-	if addr == "" {
-		addr = "http://localhost"
-	}
-
-	return &Client{
+// New creates a new client instance.
+func New(addr string) Client {
+	return &APIClient{
 		addr:   sanitizedAddr(addr),
 		client: http.Client{},
 	}
@@ -58,15 +68,17 @@ func New(addr string) *Client {
 // * SW-Public: The specified public key
 // * SW-Nonce:  The nonce for that public key
 // * SW-Sig:    The signature of the payload + the nonce
-func NewWithAuth(addr string, key cipher.PubKey, sec cipher.SecKey) *Client {
-	c := New(addr)
-	c.key = key
-	c.sec = sec
-	return c
+func NewWithAuth(addr string, key cipher.PubKey, sec cipher.SecKey) Client {
+	return &APIClient{
+		addr:   sanitizedAddr(addr),
+		client: http.Client{},
+		key:    key,
+		sec:    sec,
+	}
 }
 
 // Post POST a resource
-func (c *Client) Post(ctx context.Context, path string, payload interface{}) (*http.Response, error) {
+func (c *APIClient) Post(ctx context.Context, path string, payload interface{}) (*http.Response, error) {
 	body := bytes.NewBuffer(nil)
 	if err := json.NewEncoder(body).Encode(payload); err != nil {
 		return nil, err
@@ -80,8 +92,19 @@ func (c *Client) Post(ctx context.Context, path string, payload interface{}) (*h
 	return c.Do(req.WithContext(ctx))
 }
 
-func (c *Client) Do(req *http.Request) (*http.Response, error) {
-	if c.key.Null() {
+// Get performs a new GET request.
+func (c *APIClient) Get(ctx context.Context, path string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", c.addr+path, new(bytes.Buffer))
+	if err != nil {
+		return nil, err
+	}
+
+	return c.Do(req.WithContext(ctx))
+}
+
+// Do performs a new Request.
+func (c *APIClient) Do(req *http.Request) (*http.Response, error) {
+	if (c.key == cipher.PubKey{}) {
 		return c.client.Do(req)
 	}
 
@@ -103,7 +126,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		fmt.Sprintf("%s%d", string(body), nonce),
 	))
 
-	sig, err := cipher.SignHash(hash, c.sec)
+	sig := cipher.SignHash(hash, c.sec)
 	if err != nil {
 		return nil, err
 	}
@@ -112,8 +135,8 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	return c.client.Do(req)
 }
 
-func (c *Client) getNextNonce(ctx context.Context, key cipher.PubKey) (store.Nonce, error) {
-	resp, err := c.client.Get(c.addr + "/incrementing-nonces/" + key.Hex())
+func (c *APIClient) getNextNonce(_ context.Context, key cipher.PubKey) (store.Nonce, error) {
+	resp, err := c.client.Get(c.addr + "/security/nonces/" + key.Hex())
 	if err != nil {
 		return 0, err
 	}
@@ -131,8 +154,13 @@ func (c *Client) getNextNonce(ctx context.Context, key cipher.PubKey) (store.Non
 	return store.Nonce(nr.NextNonce), nil
 }
 
-func (c *Client) RegisterTransport(ctx context.Context, t *store.Transport) error {
-	resp, err := c.Post(ctx, "/register", t)
+// RegisterTransports registers new Transports.
+func (c *APIClient) RegisterTransports(ctx context.Context, entries ...*transport.SignedEntry) error {
+	if len(entries) == 0 {
+		return nil
+	}
+
+	resp, err := c.Post(ctx, "/transports/", entries)
 	if err != nil {
 		return err
 	}
@@ -145,8 +173,68 @@ func (c *Client) RegisterTransport(ctx context.Context, t *store.Transport) erro
 	return fmt.Errorf("status: %d, error: %v", resp.StatusCode, extractError(resp.Body))
 }
 
-func (c *Client) DeregisterTransport(ctx context.Context, id store.ID) error {
-	return nil
+// GetTransportByID returns Transport for corresponding ID.
+func (c *APIClient) GetTransportByID(ctx context.Context, id uuid.UUID) (*store.EntryWithStatus, error) {
+	resp, err := c.Get(ctx, fmt.Sprintf("/transports/id:%s", id.String()))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status: %d, error: %v", resp.StatusCode, extractError(resp.Body))
+	}
+
+	entry := &store.EntryWithStatus{}
+	if err := json.NewDecoder(resp.Body).Decode(entry); err != nil {
+		return nil, fmt.Errorf("json: %s", err)
+	}
+
+	return entry, nil
+}
+
+// GetTransportsByEdge returns all Transport registered for the edge.
+func (c *APIClient) GetTransportsByEdge(ctx context.Context, pk cipher.PubKey) ([]*store.EntryWithStatus, error) {
+	resp, err := c.Get(ctx, fmt.Sprintf("/transports/edge:%s", pk.Hex()))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status: %d, error: %v", resp.StatusCode, extractError(resp.Body))
+	}
+
+	entry := []*store.EntryWithStatus{}
+	if err := json.NewDecoder(resp.Body).Decode(&entry); err != nil {
+		return nil, fmt.Errorf("json: %s", err)
+	}
+
+	return entry, nil
+}
+
+// UpdateStatuses updates statuses of transports in discovery.
+func (c *APIClient) UpdateStatuses(ctx context.Context, statuses ...*transport.Status) ([]*store.EntryWithStatus, error) {
+	if len(statuses) == 0 {
+		return nil, nil
+	}
+
+	resp, err := c.Post(ctx, "/statuses", statuses)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("status: %d, error: %v", resp.StatusCode, extractError(resp.Body))
+	}
+
+	entries := []*store.EntryWithStatus{}
+	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
+		return nil, fmt.Errorf("json: %s", err)
+	}
+
+	return entries, nil
 }
 
 // extractError returns the decoded error message from Body.
