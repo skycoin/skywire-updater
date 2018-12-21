@@ -19,6 +19,9 @@ var (
 
 	// ErrTransportNotFound indicates that requested transport is not registered.
 	ErrTransportNotFound = errors.New("Transport not found")
+
+	// ContextAuthKey stores authenticated PubKey in Context .
+	ContextAuthKey = struct{}{}
 )
 
 // Nonce is used to sign requests in order to avoid replay attack
@@ -26,12 +29,13 @@ type Nonce uint64
 
 func (n Nonce) String() string { return fmt.Sprintf("%d", n) }
 
-//go:generate mockgen -package=mockstore -destination=mockstore/mockstore.go github.com/watercompany/skywire-services/pkg/transport-discovery/store Store
+// Store stores Transport metadata and generated nonce values.
 type Store interface {
 	TransportStore
 	NonceStore
 }
 
+// EntryWithStatus represents accumulated value stored in a Store.
 type EntryWithStatus struct {
 	Entry      *transport.Entry `json:"entry"`
 	IsUp       bool             `json:"is_up"`
@@ -39,6 +43,7 @@ type EntryWithStatus struct {
 	Statuses   [2]bool          `json:"-"`
 }
 
+// TransportStore stores Transport metadata.
 type TransportStore interface {
 	RegisterTransport(context.Context, *transport.SignedEntry) error
 	DeregisterTransport(context.Context, uuid.UUID) (*transport.Entry, error)
@@ -47,11 +52,13 @@ type TransportStore interface {
 	UpdateStatus(context.Context, uuid.UUID, bool) (*EntryWithStatus, error)
 }
 
+// NonceStore stores generated nonce values.
 type NonceStore interface {
 	IncrementNonce(context.Context, cipher.PubKey) (Nonce, error)
 	GetNonce(context.Context, cipher.PubKey) (Nonce, error)
 }
 
+// New constructs a new Store of requested type.
 func New(sType string, args ...string) (Store, error) {
 	switch sType {
 	case "memory":

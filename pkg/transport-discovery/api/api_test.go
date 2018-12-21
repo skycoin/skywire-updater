@@ -34,9 +34,9 @@ func newTestEntry() *transport.Entry {
 }
 
 func TestBadRequest(t *testing.T) {
-	mock, _ := store.New("memory")
+	mock, _ := store.New("memory") // nolint
 
-	api := New(mock, APIOptions{DisableSigVerify: true})
+	api := New(mock, Options{DisableSigVerify: true})
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("POST", "/transports/", bytes.NewBufferString("not-a-json"))
 
@@ -46,24 +46,24 @@ func TestBadRequest(t *testing.T) {
 }
 
 func TestRegisterTransport(t *testing.T) {
-	mock, _ := store.New("memory")
-	signedEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}
+	mock, _ := store.New("memory") // nolint
+	sEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}
 
-	api := New(mock, APIOptions{DisableSigVerify: true})
+	api := New(mock, Options{DisableSigVerify: true})
 	w := httptest.NewRecorder()
 
 	body := bytes.NewBuffer(nil)
-	json.NewEncoder(body).Encode([]*transport.SignedEntry{signedEntry})
+	require.NoError(t, json.NewEncoder(body).Encode([]*transport.SignedEntry{sEntry}))
 	r := httptest.NewRequest("POST", "/transports/", body)
 	api.ServeHTTP(w, r)
 
 	assert.Equal(t, http.StatusCreated, w.Code, w.Body.String())
 
 	var resp []*transport.SignedEntry
-	json.NewDecoder(bytes.NewBuffer(w.Body.Bytes())).Decode(&resp)
+	require.NoError(t, json.NewDecoder(bytes.NewBuffer(w.Body.Bytes())).Decode(&resp))
 
 	require.Len(t, resp, 1)
-	assert.Equal(t, signedEntry.Entry, resp[0].Entry)
+	assert.Equal(t, sEntry.Entry, resp[0].Entry)
 	assert.True(t, resp[0].Registered > 0)
 }
 
@@ -72,9 +72,9 @@ func TestRegisterTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	mock, _ := store.New("memory")
-	signedEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}
-	api := New(mock, APIOptions{DisableSigVerify: true})
+	mock, _ := store.New("memory") // nolint
+	sEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}
+	api := New(mock, Options{DisableSigVerify: true})
 
 	// after this ctx's deadline will be exceeded
 	time.Sleep(timeout * 2)
@@ -83,7 +83,7 @@ func TestRegisterTimeout(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	body := bytes.NewBuffer(nil)
-	json.NewEncoder(body).Encode([]*transport.SignedEntry{signedEntry})
+	require.NoError(t, json.NewEncoder(body).Encode([]*transport.SignedEntry{sEntry}))
 	r := httptest.NewRequest("POST", "/transports/", body)
 
 	api.ServeHTTP(w, r.WithContext(ctx))
@@ -92,9 +92,9 @@ func TestRegisterTimeout(t *testing.T) {
 }
 
 func TestGETTransportByID(t *testing.T) {
-	mock, _ := store.New("memory")
+	mock, _ := store.New("memory") // nolint
 
-	api := New(mock, APIOptions{DisableSigVerify: true})
+	api := New(mock, Options{DisableSigVerify: true})
 
 	ctx := context.Background()
 
@@ -121,23 +121,23 @@ func TestGETTransportByID(t *testing.T) {
 }
 
 func TestUpdateStatus(t *testing.T) {
-	mock, _ := store.New("memory")
+	mock, _ := store.New("memory") // nolint
 	sEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}
 	require.NoError(t, mock.RegisterTransport(context.Background(), sEntry))
 
-	api := New(mock, APIOptions{})
+	api := New(mock, Options{})
 	w := httptest.NewRecorder()
 
 	body := bytes.NewBuffer(nil)
-	json.NewEncoder(body).Encode([]*transport.Status{{ID: sEntry.Entry.ID, IsUp: false}})
+	require.NoError(t, json.NewEncoder(body).Encode([]*transport.Status{{ID: sEntry.Entry.ID, IsUp: false}}))
 	r := httptest.NewRequest("POST", "/statuses", body)
-	r.Header = validHeaders(t, body.Bytes())
+	r.Header = validHeaders(body.Bytes())
 	api.ServeHTTP(w, r)
 
 	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 
 	var resp []*store.EntryWithStatus
-	json.NewDecoder(bytes.NewBuffer(w.Body.Bytes())).Decode(&resp)
+	require.NoError(t, json.NewDecoder(bytes.NewBuffer(w.Body.Bytes())).Decode(&resp))
 
 	require.Len(t, resp, 1)
 	assert.Equal(t, sEntry.Entry, resp[0].Entry)
@@ -145,9 +145,9 @@ func TestUpdateStatus(t *testing.T) {
 }
 
 func TestGETTransportByEdge(t *testing.T) {
-	mock, _ := store.New("memory")
+	mock, _ := store.New("memory") // nolint
 
-	api := New(mock, APIOptions{DisableSigVerify: true})
+	api := New(mock, Options{DisableSigVerify: true})
 
 	ctx := context.Background()
 
@@ -175,16 +175,17 @@ func TestGETTransportByEdge(t *testing.T) {
 }
 
 func TestGETIncrementingNonces(t *testing.T) {
-	mock, _ := store.New("memory")
+	mock, _ := store.New("memory") // nolint
 
 	pubKey, _ := cipher.GenerateKeyPair()
 
-	api := New(mock, APIOptions{})
+	api := New(mock, Options{})
 
 	t.Run("ValidRequest", func(t *testing.T) {
 		ctx := context.Background()
-		for _ = range [0xff]bool{} {
-			mock.IncrementNonce(context.Background(), pubKey)
+		for range [0xff]bool{} {
+			_, err := mock.IncrementNonce(context.Background(), pubKey)
+			require.NoError(t, err)
 		}
 
 		w := httptest.NewRecorder()

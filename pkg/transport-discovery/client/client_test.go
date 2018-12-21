@@ -105,7 +105,7 @@ func TestRegisterTransportResponses(t *testing.T) {
 			"JSONError",
 			func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
-				json.NewEncoder(w).Encode(api.Error{Error: "boom"})
+				require.NoError(t, json.NewEncoder(w).Encode(api.Error{Error: "boom"}))
 			},
 			func(err error) {
 				require.Error(t, err)
@@ -159,9 +159,9 @@ func TestRegisterTransportResponses(t *testing.T) {
 }
 
 func TestRegisterTransports(t *testing.T) {
-	mock, _ := store.New("memory")
+	mock, _ := store.New("memory") // nolint
 
-	srv := httptest.NewServer(api.New(mock, api.APIOptions{}))
+	srv := httptest.NewServer(api.New(mock, api.Options{}))
 	defer srv.Close()
 
 	sEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}
@@ -175,8 +175,8 @@ func TestRegisterTransports(t *testing.T) {
 }
 
 func TestGetTransportByID(t *testing.T) {
-	mock, _ := store.New("memory")
-	srv := httptest.NewServer(api.New(mock, api.APIOptions{}))
+	mock, _ := store.New("memory") // nolint
+	srv := httptest.NewServer(api.New(mock, api.Options{}))
 	defer srv.Close()
 
 	sEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}
@@ -191,8 +191,8 @@ func TestGetTransportByID(t *testing.T) {
 }
 
 func TestGetTransportsByEdge(t *testing.T) {
-	mock, _ := store.New("memory")
-	srv := httptest.NewServer(api.New(mock, api.APIOptions{}))
+	mock, _ := store.New("memory") // nolint
+	srv := httptest.NewServer(api.New(mock, api.Options{}))
 	defer srv.Close()
 
 	sEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}
@@ -208,8 +208,8 @@ func TestGetTransportsByEdge(t *testing.T) {
 }
 
 func TestUpdateStatuses(t *testing.T) {
-	mock, _ := store.New("memory")
-	srv := httptest.NewServer(api.New(mock, api.APIOptions{}))
+	mock, _ := store.New("memory") // nolint
+	srv := httptest.NewServer(api.New(mock, api.Options{}))
 	defer srv.Close()
 
 	sEntry := &transport.SignedEntry{Entry: newTestEntry(), Signatures: [2]string{"foo", "bar"}}

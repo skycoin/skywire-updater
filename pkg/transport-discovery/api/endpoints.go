@@ -39,7 +39,7 @@ func (api *API) registerTransport(w http.ResponseWriter, r *http.Request) (inter
 	return entries, nil
 }
 
-func (api *API) getTransport(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (api *API) getTransport(_ http.ResponseWriter, r *http.Request) (interface{}, error) {
 	components := strings.Split(strings.Replace(r.URL.Path, "/transports/", "", -1), ":")
 
 	if len(components) != 2 {

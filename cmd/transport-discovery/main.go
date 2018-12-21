@@ -17,7 +17,7 @@ func main() {
 		serve,
 	}
 
-	app.RunAndExitOnError()
+	app.RunAndExitOnError() // nolint
 }
 
 var serve = cli.Command{
@@ -39,6 +39,6 @@ var serve = cli.Command{
 		}
 		log.Printf("Listening on %s", l.Addr().String())
 
-		return http.Serve(l, api.New(s, api.APIOptions{}))
+		return http.Serve(l, api.New(s, api.Options{}))
 	},
 }

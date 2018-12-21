@@ -116,7 +116,7 @@ func (s *redisStore) GetTransportsByEdge(_ context.Context, pk cipher.PubKey) ([
 }
 
 func (s *redisStore) UpdateStatus(ctx context.Context, id uuid.UUID, isUp bool) (*EntryWithStatus, error) {
-	pk, ok := ctx.Value("auth-pub-key").(cipher.PubKey)
+	pk, ok := ctx.Value(ContextAuthKey).(cipher.PubKey)
 	if !ok {
 		return nil, errors.New("invalid auth")
 	}
@@ -149,7 +149,7 @@ func (s *redisStore) GetNonce(ctx context.Context, pk cipher.PubKey) (Nonce, err
 		return 0, nil
 	}
 
-	n, _ := strconv.Atoi(nonce)
+	n, _ := strconv.Atoi(nonce) // nolint
 	return Nonce(n), nil
 }
 

@@ -1,4 +1,4 @@
-// package auth provides a set of convenience functions that wrap cipher signature functions.
+// Package auth provides a set of convenience functions that wrap cipher signature functions.
 package auth
 
 import (

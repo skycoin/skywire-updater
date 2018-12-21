@@ -65,16 +65,16 @@ func (s *TransportSuite) TestRegister() {
 		assert.True(t, entries[0].IsUp)
 
 		pk, _ := cipher.GenerateKeyPair()
-		entries, err = s.GetTransportsByEdge(ctx, pk)
+		_, err = s.GetTransportsByEdge(ctx, pk)
 		require.Error(t, err)
 	})
 
 	t.Run(".UpdateStatus", func(t *testing.T) {
-		entry, err := s.UpdateStatus(ctx, sEntry.Entry.ID, false)
+		_, err := s.UpdateStatus(ctx, sEntry.Entry.ID, false)
 		require.Error(t, err)
 		assert.Equal(t, "invalid auth", err.Error())
 
-		entry, err = s.UpdateStatus(context.WithValue(ctx, "auth-pub-key", pk1), sEntry.Entry.ID, false)
+		entry, err := s.UpdateStatus(context.WithValue(ctx, ContextAuthKey, pk1), sEntry.Entry.ID, false)
 		require.NoError(t, err)
 		assert.Equal(t, sEntry.Entry, entry.Entry)
 		assert.False(t, entry.IsUp)

@@ -12,7 +12,7 @@ import (
 )
 
 func TestMemory(t *testing.T) {
-	s, _ := New("memory")
+	s, _ := New("memory") // nolint
 	suite.Run(t, &TransportSuite{TransportStore: s})
 	suite.Run(t, &NonceSuite{NonceStore: s})
 }
@@ -20,7 +20,7 @@ func TestMemory(t *testing.T) {
 func TestMemoryConcurrency(t *testing.T) {
 	wg := sync.WaitGroup{}
 	n := 100
-	s, _ := New("memory")
+	s, _ := New("memory") // nolint
 	pub, _ := cipher.GenerateKeyPair()
 
 	ctx := context.Background()

@@ -20,6 +20,7 @@ import (
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 
+// Client performs Transport discovery operations.
 type Client interface {
 	RegisterTransports(ctx context.Context, entries ...*transport.SignedEntry) error
 	GetTransportByID(ctx context.Context, id uuid.UUID) (*store.EntryWithStatus, error)
@@ -27,6 +28,7 @@ type Client interface {
 	UpdateStatuses(ctx context.Context, statuses ...*transport.Status) ([]*store.EntryWithStatus, error)
 }
 
+// APIClient implements Client for discovery API.
 type APIClient struct {
 	addr   string
 	client http.Client
@@ -52,7 +54,7 @@ func sanitizedAddr(addr string) string {
 	return u.String()
 }
 
-// Creates a new client instance.
+// New creates a new client instance.
 func New(addr string) Client {
 	return &APIClient{
 		addr:   sanitizedAddr(addr),
@@ -90,6 +92,7 @@ func (c *APIClient) Post(ctx context.Context, path string, payload interface{}) 
 	return c.Do(req.WithContext(ctx))
 }
 
+// Get performs a new GET request.
 func (c *APIClient) Get(ctx context.Context, path string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", c.addr+path, new(bytes.Buffer))
 	if err != nil {
@@ -99,6 +102,7 @@ func (c *APIClient) Get(ctx context.Context, path string) (*http.Response, error
 	return c.Do(req.WithContext(ctx))
 }
 
+// Do performs a new Request.
 func (c *APIClient) Do(req *http.Request) (*http.Response, error) {
 	if (c.key == cipher.PubKey{}) {
 		return c.client.Do(req)
@@ -131,7 +135,7 @@ func (c *APIClient) Do(req *http.Request) (*http.Response, error) {
 	return c.client.Do(req)
 }
 
-func (c *APIClient) getNextNonce(ctx context.Context, key cipher.PubKey) (store.Nonce, error) {
+func (c *APIClient) getNextNonce(_ context.Context, key cipher.PubKey) (store.Nonce, error) {
 	resp, err := c.client.Get(c.addr + "/security/nonces/" + key.Hex())
 	if err != nil {
 		return 0, err
@@ -150,6 +154,7 @@ func (c *APIClient) getNextNonce(ctx context.Context, key cipher.PubKey) (store.
 	return store.Nonce(nr.NextNonce), nil
 }
 
+// RegisterTransports registers new Transports.
 func (c *APIClient) RegisterTransports(ctx context.Context, entries ...*transport.SignedEntry) error {
 	if len(entries) == 0 {
 		return nil
@@ -168,6 +173,7 @@ func (c *APIClient) RegisterTransports(ctx context.Context, entries ...*transpor
 	return fmt.Errorf("status: %d, error: %v", resp.StatusCode, extractError(resp.Body))
 }
 
+// GetTransportByID returns Transport for corresponding ID.
 func (c *APIClient) GetTransportByID(ctx context.Context, id uuid.UUID) (*store.EntryWithStatus, error) {
 	resp, err := c.Get(ctx, fmt.Sprintf("/transports/id:%s", id.String()))
 	if err != nil {
@@ -187,6 +193,7 @@ func (c *APIClient) GetTransportByID(ctx context.Context, id uuid.UUID) (*store.
 	return entry, nil
 }
 
+// GetTransportsByEdge returns all Transport registered for the edge.
 func (c *APIClient) GetTransportsByEdge(ctx context.Context, pk cipher.PubKey) ([]*store.EntryWithStatus, error) {
 	resp, err := c.Get(ctx, fmt.Sprintf("/transports/edge:%s", pk.Hex()))
 	if err != nil {
@@ -206,6 +213,7 @@ func (c *APIClient) GetTransportsByEdge(ctx context.Context, pk cipher.PubKey) (
 	return entry, nil
 }
 
+// UpdateStatuses updates statuses of transports in discovery.
 func (c *APIClient) UpdateStatuses(ctx context.Context, statuses ...*transport.Status) ([]*store.EntryWithStatus, error) {
 	if len(statuses) == 0 {
 		return nil, nil

@@ -60,10 +60,12 @@ func authFromHeaders(hdr http.Header) (*Auth, error) {
 	return a, nil
 }
 
+// Verify verifies signature of a payload.
 func (a *Auth) Verify(in []byte) error {
 	return auth.Verify(in, a.Nonce, a.Key, a.Sig)
 }
 
+// VerifyAuth verifies Request's signature.
 func (api *API) VerifyAuth(r *http.Request, auth *Auth) error {
 	cur, err := api.store.GetNonce(r.Context(), auth.Key)
 	if err != nil {

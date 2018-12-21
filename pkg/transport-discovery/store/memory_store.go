@@ -129,7 +129,7 @@ func (s *memStore) UpdateStatus(ctx context.Context, id uuid.UUID, isUp bool) (*
 		return nil, s.err
 	}
 
-	pk, ok := ctx.Value("auth-pub-key").(cipher.PubKey)
+	pk, ok := ctx.Value(ContextAuthKey).(cipher.PubKey)
 	if !ok {
 		return nil, errors.New("invalid auth")
 	}

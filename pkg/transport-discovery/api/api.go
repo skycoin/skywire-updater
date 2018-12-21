@@ -11,14 +11,18 @@ import (
 )
 
 var (
-	ErrEmptyPubKey        = errors.New("PublicKey can't by empty")
-	ErrInvalidPubKey      = errors.New("PublicKey is invalid")
-	ErrEmptyTransportID   = errors.New("TransportID can't by empty")
+	// ErrEmptyPubKey indicates that provided PubKey is empty.
+	ErrEmptyPubKey = errors.New("PublicKey can't by empty")
+	// ErrInvalidPubKey indicates that provided PubKey is invalid.
+	ErrInvalidPubKey = errors.New("PublicKey is invalid")
+	// ErrEmptyTransportID indicates that provided TransportID is empty.
+	ErrEmptyTransportID = errors.New("TransportID can't by empty")
+	// ErrInvalidTransportID indicates that provided TransportID is invalid.
 	ErrInvalidTransportID = errors.New("TransportID is invalid")
 )
 
-// APIOptions control particular behavior
-type APIOptions struct {
+// Options control particular behavior
+type Options struct {
 	// DisableSigVerify disables signature verification on the request header
 	DisableSigVerify bool
 }
@@ -28,10 +32,11 @@ type APIOptions struct {
 type API struct {
 	mux   *http.ServeMux
 	store store.Store
-	opts  APIOptions
+	opts  Options
 }
 
-func New(s store.Store, opts APIOptions) *API {
+// New constructs a new API instance.
+func New(s store.Store, opts Options) *API {
 	mux := http.NewServeMux()
 	api := &API{mux: mux, store: s, opts: opts}
 
@@ -49,9 +54,7 @@ type Error struct {
 
 func renderError(w http.ResponseWriter, code int, err error) {
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(&Error{
-		Error: err.Error(),
-	})
+	json.NewEncoder(w).Encode(&Error{Error: err.Error()}) // nolint
 }
 
 // apiHandler is an adapter to reduce api handler endpoint boilerplate
@@ -63,7 +66,7 @@ func (fn apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	res, err := fn(w, r)
 	if err == nil {
-		json.NewEncoder(w).Encode(res)
+		json.NewEncoder(w).Encode(res) // nolint
 		return
 	}
 
@@ -118,7 +121,7 @@ func (api *API) withSigVer(next http.Handler) http.Handler {
 				return
 			}
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, "auth-pub-key", auth.Key)))
+		next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, store.ContextAuthKey, auth.Key)))
 	}
 
 	return http.HandlerFunc(fn)
