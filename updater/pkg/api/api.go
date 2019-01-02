@@ -96,12 +96,14 @@ func (s *ServerGateway) Start(addrs string) error {
 
 	s.server = &http.Server{}
 	mux := http.NewServeMux()
+	mux.HandleFunc("/check/", s.Check)
 	mux.HandleFunc("/update/", s.Update)
 	mux.HandleFunc("/register/", s.Register)
 	mux.HandleFunc("/unregister/", s.Unregister)
 	s.server.Handler = mux
 
 	s.starter.Start()
+
 	return s.server.Serve(l)
 }
 
@@ -109,6 +111,21 @@ func (s *ServerGateway) Start(addrs string) error {
 func (s *ServerGateway) Stop() error {
 	s.starter.Stop()
 	return s.server.Shutdown(context.Background())
+}
+
+// Update gets the service that needs to be updated and updates it
+// URI: /check/:service_name
+// Method: GET
+func (s *ServerGateway) Check(w http.ResponseWriter, r *http.Request) {
+	service := retrieveServiceFromURL(r.URL)
+	err := s.starter.Check(service)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError,
+			NewHTTPErrorResponse(http.StatusInternalServerError, err.Error()))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, HTTPResponse{Data: service + " has update"})
 }
 
 // Update gets the service that needs to be updated and updates it

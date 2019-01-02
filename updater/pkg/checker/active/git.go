@@ -6,8 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/watercompany/skywire-services/updater/pkg/checker"
 	"github.com/watercompany/skywire-services/updater/pkg/config"
 	"github.com/watercompany/skywire-services/updater/pkg/logger"
@@ -54,31 +52,8 @@ func (g *git) SetLastRelease(tag string, date *time.Time) {
 	}
 }
 
-func (g *git) SetInterval(t time.Duration) {
-	g.interval = t
-
-	g.lock.Lock()
-	if g.ticker != nil {
-		g.ticker = time.NewTicker(g.interval)
-	}
-	g.lock.Unlock()
-}
-
-func (g *git) Start() {
-	g.ticker = time.NewTicker(g.interval)
-	go func() {
-		for t := range g.ticker.C {
-			g.log.Info("looking for new version at: ", t)
-			// Try to fetch new version
-			go g.checkIfNew()
-		}
-	}()
-	<-g.exit
-}
-
-func (g *git) Stop() {
-	g.ticker.Stop()
-	g.exit <- 1
+func (g *git) Check() error {
+	return g.checkIfNew()
 }
 
 // ReleaseJSON encodes a release object in github to fetch its information
@@ -88,7 +63,7 @@ type ReleaseJSON struct {
 	PublishedAt string `json:"published_at"`
 }
 
-func (g *git) checkIfNew() {
+func (g *git) checkIfNew() error {
 	if g.IsLock() {
 		g.log.Warnf("service %s is already being updated... waiting for it to finish", g.service)
 	}
@@ -103,15 +78,15 @@ func (g *git) checkIfNew() {
 
 		// request notify url
 		err := checker.NotifyUpdate(g.notifyURL, g.service, g.tag, g.tag, "token")
-
 		if err != nil {
-			logrus.Error(err)
+			return err
 		} else {
 			g.storeLastUpdated(publishedTime)
 		}
 	} else {
-		g.log.Info("no new version")
+		return ErrNoNewVersion
 	}
+	return nil
 }
 
 func (g *git) fetchGithubRelease() *ReleaseJSON {

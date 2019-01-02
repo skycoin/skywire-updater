@@ -2,17 +2,21 @@ package active
 
 import (
 	"time"
+	"errors"
 
 	"github.com/watercompany/skywire-services/updater/pkg/config"
 	"github.com/watercompany/skywire-services/updater/pkg/logger"
 )
 
+// Fetcher errors
+var (
+	ErrNoNewVersion = errors.New("no new version")
+)
+
 // Fetcher represents an update available checker, which will fetch the information of such update every
 // given interval
 type Fetcher interface {
-	SetInterval(duration time.Duration)
-	Start()
-	Stop()
+	Check() error
 }
 
 // New returns a new Fetcher of the given kind type

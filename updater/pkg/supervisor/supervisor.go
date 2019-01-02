@@ -100,10 +100,6 @@ func (s *Supervisor) Register(service, url, notifyURL, version string) {
 		service, service, serviceConfig.Repository, notifyURL, serviceConfig,
 		time.Minute*6, loggerPkg.NewLogger(service))
 	s.registerChecker(service, checker)
-
-	checker.SetInterval(defaultSubscriptorConfig.interval)
-	go checker.Start()
-
 }
 
 // Unregister removes the given service from updater, so it won't look for new updates for it
@@ -120,24 +116,31 @@ func (s *Supervisor) Unregister(service string) error {
 
 // Start spawns the checkers and updaters
 func (s *Supervisor) Start() {
-	for _, checker := range s.activeCheckers {
-		go checker.Start()
-	}
-
-	for _, checker := range s.passiveCheckers {
-		go checker.Start()
+	if s.passiveCheckers != nil {
+		for _, checker := range s.passiveCheckers {
+			go checker.Start()
+		}
 	}
 }
 
 // Stop stops checkers and updaters
 func (s *Supervisor) Stop() {
-	for _, checker := range s.activeCheckers {
-		checker.Stop()
+	if s.passiveCheckers != nil {
+		for _, checker := range s.passiveCheckers {
+			checker.Stop()
+		}
+	}
+}
+
+// Checks if there is an update for given service
+func (s *Supervisor) Check(service string) error {
+	// get service
+	serviceConfig, err := s.config.ServiceConfig(service)
+	if err != nil {
+		return err
 	}
 
-	for _, checker := range s.passiveCheckers {
-		checker.Stop()
-	}
+	return s.activeCheckers[serviceConfig.ActiveUpdateChecker].Check()
 }
 
 // Update updates the given service
@@ -195,19 +198,9 @@ func (s *Supervisor) registerPassiveChecker(conf *config.Configuration, c config
 }
 
 func (s *Supervisor) registerActiveChecker(conf *config.Configuration, c config.ServiceConfig, name string) {
-	activeConfig, ok := conf.ActiveUpdateCheckers[c.ActiveUpdateChecker]
-	if !ok {
-		logrus.Fatalf("%s checker not defined for service %s",
-			c.ActiveUpdateChecker, name)
-	}
-	interval, err := time.ParseDuration(activeConfig.Interval)
+	checkTimeout, err := time.ParseDuration(c.CheckScriptTimeout)
 	if err != nil {
-		logrus.Fatalf("cannot parse interval %s of active checker configuration %s. %s", activeConfig.Interval,
-			c.ActiveUpdateChecker, err)
-	}
-	checkTimeout, err := time.ParseDuration(activeConfig.Interval)
-	if err != nil {
-		logrus.Fatalf("cannot parse check script timeout %s of active checker configuration %s. %s", activeConfig.Interval,
+		logrus.Fatalf("cannot parse check script timeout %s of active checker configuration %s. %s", c.CheckScriptTimeout,
 			c.ActiveUpdateChecker, err)
 	}
 	log := loggerPkg.NewLogger(name)
@@ -219,6 +212,5 @@ func (s *Supervisor) registerActiveChecker(conf *config.Configuration, c config.
 
 	c.CheckScript = filepath.Join(conf.ScriptsDirectory, c.CheckScript)
 	checker := active.New(fc.Kind, name, c.LocalName, c.Repository, fc.NotifyURL, c, checkTimeout, log)
-	checker.SetInterval(interval)
 	s.activeCheckers[name] = checker
 }

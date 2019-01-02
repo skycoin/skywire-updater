@@ -3,7 +3,7 @@
 
 # Updater
 
-updater is a service that can be configured to look for updates for other services, and when those are
+`updater` is a simplified version of [`autoupdater`](https://github.com/skycoin/services/tree/master/autoupdater) service that can be configured to look for updates for other services, and when those are
 available, send a POST request to a configured address notifying of such update. After that the API
 exposed by updater can be used to update any service.
 

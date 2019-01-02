@@ -18,8 +18,6 @@ type naive struct {
 	service              string
 	localName            string
 	url                  string
-	interval             time.Duration
-	ticker               *time.Ticker
 	lock                 sync.Mutex
 	exit                 chan int
 	notifyURL            string
@@ -47,48 +45,26 @@ func newNaive(service, localName, url, notifyURL, scriptInterpreter, updateCheck
 	}
 }
 
-func (n *naive) SetInterval(t time.Duration) {
-	n.interval = t
-
-	n.lock.Lock()
-	if n.ticker != nil {
-		n.ticker = time.NewTicker(n.interval)
-	}
-	n.lock.Unlock()
+func (n *naive) Check() error {
+	return n.checkIfNew()
 }
 
-func (n *naive) Start() {
-	n.ticker = time.NewTicker(n.interval)
-	go func() {
-		for t := range n.ticker.C {
-			n.log.Info("looking for new version at: ", t)
-			// Try to fetch new version
-			go n.checkIfNew()
-		}
-	}()
-	<-n.exit
-}
-
-func (n *naive) Stop() {
-	n.ticker.Stop()
-	n.exit <- 1
-}
-
-func (n *naive) checkIfNew() {
+func (n *naive) checkIfNew() error {
 	n.log.Info("checking update...")
 
 	isUpdate, err := n.checkIfUpdate()
 	if err != nil {
-		n.log.Error(err)
+		return err
 	}
 	if isUpdate {
 		err = checker.NotifyUpdate(n.notifyURL, n.service, "master", "master", "token")
 		if err != nil {
-			n.log.Error(err)
+			return err
 		}
 	} else {
-		n.log.Info("up to date")
+		return ErrNoNewVersion
 	}
+	return nil
 }
 
 func (n *naive) checkIfUpdate() (bool, error) {

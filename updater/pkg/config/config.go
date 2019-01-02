@@ -37,7 +37,6 @@ type UpdaterConfig struct {
 
 // FetcherConfig represents an user-defined fetcher of one of the available kinds
 type FetcherConfig struct {
-	Interval  string `yaml:"interval"`
 	Kind      string `yaml:"kind"`
 	NotifyURL string `yaml:"notify_url"`
 }
