@@ -1,8 +1,8 @@
 package active
 
 import (
-	"time"
 	"errors"
+	"time"
 
 	"github.com/watercompany/skywire-services/updater/pkg/config"
 	"github.com/watercompany/skywire-services/updater/pkg/logger"

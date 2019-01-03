@@ -20,13 +20,6 @@ build_and_copy() {
     cp ${2} ${GOBIN}/${2}
 }
 
-build_and_copy () {
-    cd $1
-    go build
-
-    cp ${2} ${GOBIN}/${2}
-}
-
 echo "fetching"
 echo "go get -d -u ${service_github_url}"
 
@@ -42,7 +35,7 @@ echo "fetched"
 
 echo "updating..."
 
-build_and_copy${binary} ${process_name}
+build_and_copy ${binary} ${process_name}
 
 echo "updated"
 echo "restarting..."

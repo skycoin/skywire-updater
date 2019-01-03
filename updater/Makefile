@@ -6,7 +6,7 @@ lint: ## Run linters. Use make install-linters first.
 
 install:
 	mkdir -p ${HOME}/.skywire-updater
-	cp -r ./scripts ${HOME}/.skywire-updater/scripts
+	cp -r ./scripts ${HOME}/.skywire-updater/
 
 install-linters: ## Install linters
 	go get -u github.com/FiloSottile/vendorcheck

@@ -60,6 +60,13 @@ services, for example:
 
 # API
 
+#### Check
+Check checks if there is an update for the given service
+```
+URI: /check/:service_name
+Method: GET
+```
+
 #### Update
 Update updates the given service, which should match the name given in the configuration
 ```
@@ -92,7 +99,7 @@ Method: POST
 
 A `configuration.example.yml` file is provided as a reference file.
 
-The configuration file has 3 sections:
+The configuration file has 2 sections:
 
 1. **active_update_checkers:**
     Is a list containing named active checkers configurations, each named item should hold the next configuration:
@@ -103,24 +110,14 @@ interval: interval in which to check if there is a new update. Example: "30s"
 kind: which kind of checker is it, git or dockerhub: "git"
 ```
 
-2. **passive_update_checkers:**
-    Is a list containing named passive checkers configurations, each named item should hold the next configuration:
-
-```
-message-broker: kind of the message-broker to subscribe to. Example: "nats"
-topic: topic on the message-broker to subscribe to. Example: "top"
-urls: urls of message-broker cluster to join to. One or more. Example:
-    - "http://localhost:4222"
-```
-
-3. **updaters:**
+2. **updaters:**
     Is a list containing named updaters, each named item should hold the next configuration:
 
 ```
 kind: the kind of updater to instantiate, swarm or custom. Example: "custom"
 ```
 
-4. **services:**
+3. **services:**
     Is a list containing named services, each named item should hold the next configuration:
 
 ```
@@ -135,9 +132,8 @@ update_script_interpreter: interpreter of the script in case you are using a cus
 update_script_timeout: timeout for the script in case you are using a custom updater. Example: "20s"
 update_script_extra_arguments: extra arguments that you want to be passed to the updater script in case you are using a custom updater. Example: ["-a 1"]
 active_update_checker: name of a previously defined active update checker if used. Example: "dockerhub_fetcher"
-active_update_checker: name of a previously defined passive update checker if used. Example: "nats"
 repository: repository of the service in the format /:owner/:name for lookup on dockerhub or github. Example: "/library/mariadb"
-check_tag: name of the tag to check for updates, this is used to check for updates on github or dockerhub. Don't needed for passive checkers. Example: "latest"
+check_tag: name of the tag to check for updates, this is used to check for updates on github or dockerhub. Example: "latest"
 updater: previously defined updater configuration name. Example: "custom"
 ```
 

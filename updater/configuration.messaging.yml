@@ -23,7 +23,7 @@ services:
     update_script_extra_arguments:
       - "-c localhost:9094 -a localhost:8084 -s test-server"
     active_update_checker: "naive"
-    repository: "/watercompany/messaging"
+    repository: "/watercompany/skywire-messaging"
     updater: "custom"
 
   skywire-messaging-client:
@@ -37,7 +37,7 @@ services:
     update_script_timeout: "20m"
     update_script_extra_arguments:
     active_update_checker: "naive"
-    repository: "/watercompany/messaging"
+    repository: "/watercompany/skywire-messaging"
     updater: "custom"
 
   skywire-messaging-discovery:
@@ -52,5 +52,5 @@ services:
     update_script_extra_arguments:
       - "-p 9090"
     active_update_checker: "naive"
-    repository: "/watercompany/messaging"
+    repository: "/watercompany/skywire-messaging"
     updater: "custom"

@@ -13,7 +13,6 @@ import (
 
 	"github.com/skycoin/skycoin/src/util/logging"
 	"github.com/watercompany/skywire-services/updater/pkg/checker/active"
-	"github.com/watercompany/skywire-services/updater/pkg/checker/passive"
 	"github.com/watercompany/skywire-services/updater/pkg/config"
 	loggerPkg "github.com/watercompany/skywire-services/updater/pkg/logger"
 	"github.com/watercompany/skywire-services/updater/pkg/store/services"
@@ -37,11 +36,21 @@ var defaultSubscriptorConfig = struct {
 // Supervisor is responsible for spawning fetchers and updaters as well as to allow to modify or update
 // updater defined services
 type Supervisor struct {
-	activeCheckers  map[string]active.Fetcher
-	passiveCheckers map[string]passive.Subscriber
-	updaters        map[string]updater.Updater
-	config          *config.Configuration
+	activeCheckers map[string]active.Fetcher
+	updaters       map[string]updater.Updater
+	config         *config.Configuration
 	sync.RWMutex
+}
+
+func (s *Supervisor) checker(name string) (active.Fetcher, error) {
+	s.RLock()
+	defer s.RUnlock()
+
+	checker, ok := s.activeCheckers[name]
+	if !ok {
+		return nil, ErrServiceNotFound
+	}
+	return checker, nil
 }
 
 func (s *Supervisor) registerChecker(service string, checker active.Fetcher) {
@@ -61,10 +70,9 @@ func (s *Supervisor) unregisterChecker(service string) {
 // New returns a supervisor with the given configuration
 func New(conf *config.Configuration) *Supervisor {
 	s := &Supervisor{
-		activeCheckers:  map[string]active.Fetcher{},
-		passiveCheckers: map[string]passive.Subscriber{},
-		updaters:        map[string]updater.Updater{},
-		config:          conf,
+		activeCheckers: map[string]active.Fetcher{},
+		updaters:       map[string]updater.Updater{},
+		config:         conf,
 	}
 
 	services.InitStorer("json")
@@ -114,33 +122,15 @@ func (s *Supervisor) Unregister(service string) error {
 	return nil
 }
 
-// Start spawns the checkers and updaters
-func (s *Supervisor) Start() {
-	if s.passiveCheckers != nil {
-		for _, checker := range s.passiveCheckers {
-			go checker.Start()
-		}
-	}
-}
-
-// Stop stops checkers and updaters
-func (s *Supervisor) Stop() {
-	if s.passiveCheckers != nil {
-		for _, checker := range s.passiveCheckers {
-			checker.Stop()
-		}
-	}
-}
-
-// Checks if there is an update for given service
+// Check checks if there is an update for given service
 func (s *Supervisor) Check(service string) error {
-	// get service
-	serviceConfig, err := s.config.ServiceConfig(service)
+	// get checker from service name
+	checker, err := s.checker(service)
 	if err != nil {
 		return err
 	}
 
-	return s.activeCheckers[serviceConfig.ActiveUpdateChecker].Check()
+	return checker.Check()
 }
 
 // Update updates the given service
@@ -179,22 +169,8 @@ func (s *Supervisor) createCheckers(conf *config.Configuration) {
 	for name, c := range conf.Services {
 		if c.ActiveUpdateChecker != "" {
 			s.registerActiveChecker(conf, c, name)
-		} else {
-			s.registerPassiveChecker(conf, c, name)
 		}
 	}
-}
-
-func (s *Supervisor) registerPassiveChecker(conf *config.Configuration, c config.ServiceConfig, name string) {
-	passiveConfig, ok := conf.PassiveUpdateCheckers[c.PassiveUpdateChecker]
-	if !ok {
-		logrus.Fatalf("%s checker not defined for service %s",
-			c.ActiveUpdateChecker, name)
-	}
-	log := loggerPkg.NewLogger(name)
-	sub := passive.New(passiveConfig, s.updaters[c.Updater], log)
-	s.passiveCheckers[name] = sub
-	sub.Subscribe(passiveConfig.Topic)
 }
 
 func (s *Supervisor) registerActiveChecker(conf *config.Configuration, c config.ServiceConfig, name string) {

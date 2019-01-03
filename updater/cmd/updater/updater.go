@@ -8,9 +8,11 @@ import (
 
 	"github.com/watercompany/skywire-services/updater/pkg/api"
 	"github.com/watercompany/skywire-services/updater/pkg/config"
+	"github.com/watercompany/skywire-services/updater/pkg/logger"
 )
 
 var (
+	log        = logger.NewLogger("updater")
 	configFile string
 	apiPort    string
 )
@@ -28,7 +30,7 @@ func main() {
 	go func() {
 		err := gateway.Start("localhost:" + apiPort)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	}()
 

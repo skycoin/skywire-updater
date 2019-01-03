@@ -3,7 +3,6 @@ package active
 import (
 	"encoding/json"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/watercompany/skywire-services/updater/pkg/checker"
@@ -17,9 +16,6 @@ type git struct {
 	notifyURL string
 	url       string
 	service   string
-	interval  time.Duration
-	ticker    *time.Ticker
-	lock      sync.Mutex
 	tag       string
 	date      *time.Time
 	exit      chan int
@@ -80,9 +76,8 @@ func (g *git) checkIfNew() error {
 		err := checker.NotifyUpdate(g.notifyURL, g.service, g.tag, g.tag, "token")
 		if err != nil {
 			return err
-		} else {
-			g.storeLastUpdated(publishedTime)
 		}
+		g.storeLastUpdated(publishedTime)
 	} else {
 		return ErrNoNewVersion
 	}

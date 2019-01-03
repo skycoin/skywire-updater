@@ -17,8 +17,21 @@ binary="${GOPATH}/src/${service_github_url}/cmd/${process_name}"
 binary_directory=${GOBIN}
 
 check_if_different() {
+    echo "cd into ${1}"
     cd $1
+    exit_status=$?
+    if [ ${exit_status} != 0 -a ${exit_status} != 1 ]; then
+        echo "check script: no such file or directory"
+        exit 2
+    fi
+    echo "check script: current directory is $(pwd)"
     go build
+    exit_status=$?
+
+    if [ ${exit_status} != 0 -a ${exit_status} != 1 ]; then
+        echo "check script: failed building binary"
+        exit 2
+    fi
 
     if [[ -z $(diff ${GOBIN}/${2} ./${2}) ]]; then
         echo "check script: already up to date"
@@ -27,13 +40,6 @@ check_if_different() {
 
    echo "check script: new version"
    exit 0
-}
-
-build_and_copy () {
-    cd $1
-    go build
-
-    cp ${2} ${GOBIN}/${2}
 }
 
 echo "check script: fetching"

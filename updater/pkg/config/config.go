@@ -19,12 +19,11 @@ var (
 
 // Configuration represents an updater service configuration
 type Configuration struct {
-	ScriptsDirectory      string                      `yaml:"scripts_directory"`
-	Port                  uint16                      `yaml:"port"`
-	Updaters              map[string]UpdaterConfig    `yaml:"updaters"`
-	ActiveUpdateCheckers  map[string]FetcherConfig    `yaml:"active_update_checkers"`
-	PassiveUpdateCheckers map[string]SubscriberConfig `yaml:"passive_update_checkers"`
-	Services              map[string]ServiceConfig    `yaml:"services"`
+	ScriptsDirectory     string                   `yaml:"scripts_directory"`
+	Port                 uint16                   `yaml:"port"`
+	Updaters             map[string]UpdaterConfig `yaml:"updaters"`
+	ActiveUpdateCheckers map[string]FetcherConfig `yaml:"active_update_checkers"`
+	Services             map[string]ServiceConfig `yaml:"services"`
 	sync.RWMutex
 }
 
@@ -62,7 +61,6 @@ type ServiceConfig struct {
 	CheckScriptInterpreter     string   `yaml:"check_script_interpreter"`
 	CheckScriptExtraArguments  []string `yaml:"check_script_extra_arguments"`
 	ActiveUpdateChecker        string   `yaml:"active_update_checker"`
-	PassiveUpdateChecker       string   `yaml:"passive_update_checker"`
 	CheckTag                   string   `yaml:"check_tag"`
 	Updater                    string   `yaml:"updater"`
 	Repository                 string   `yaml:"repository"`
@@ -71,9 +69,8 @@ type ServiceConfig struct {
 // New creates and returns a new configuration
 func New() *Configuration {
 	return &Configuration{
-		ActiveUpdateCheckers:  make(map[string]FetcherConfig),
-		PassiveUpdateCheckers: make(map[string]SubscriberConfig),
-		Services:              make(map[string]ServiceConfig),
+		ActiveUpdateCheckers: make(map[string]FetcherConfig),
+		Services:             make(map[string]ServiceConfig),
 	}
 }
 
@@ -87,9 +84,8 @@ func NewFromFile(path string) *Configuration {
 	}
 
 	conf := &Configuration{
-		ActiveUpdateCheckers:  make(map[string]FetcherConfig),
-		PassiveUpdateCheckers: make(map[string]SubscriberConfig),
-		Services:              make(map[string]ServiceConfig),
+		ActiveUpdateCheckers: make(map[string]FetcherConfig),
+		Services:             make(map[string]ServiceConfig),
 	}
 
 	err = yaml.Unmarshal(b, &conf)

@@ -1,7 +1,6 @@
 package active
 
 import (
-	"sync"
 	"time"
 
 	"fmt"
@@ -18,7 +17,6 @@ type naive struct {
 	service              string
 	localName            string
 	url                  string
-	lock                 sync.Mutex
 	exit                 chan int
 	notifyURL            string
 	updateCheckScript    string
@@ -78,7 +76,7 @@ func (n *naive) checkIfUpdate() (bool, error) {
 
 	go timeoutCmd(n.service, n.scriptTimeout, customCmd, errCh)
 
-	return waitForExit(statusChan, errCh, n.log)
+	return waitForExit(statusChan, errCh)
 }
 
 func createAndLaunch(localName, version, scriptInterpreter, script, service, url string, arguments []string, log *logger.Logger) (*cmd.Cmd, <-chan cmd.Status) {
@@ -127,14 +125,17 @@ func timeoutCmd(service string, timeout time.Duration, customCmd *cmd.Cmd, errCh
 	errCh <- fmt.Errorf("update script for service %s timed out", service)
 }
 
-func waitForExit(statusChan <-chan cmd.Status, errCh chan error, log *logger.Logger) (bool, error) {
+func waitForExit(statusChan <-chan cmd.Status, errCh chan error) (bool, error) {
 	for {
 		select {
 		case finalStatus := <-statusChan:
-			if finalStatus.Exit != 0 {
+			if finalStatus.Exit != 0 && finalStatus.Exit != 1 {
 				return false, fmt.Errorf("exit with non-zero status %d", finalStatus.Exit)
 			}
-			log.Infof("check script ran and reported no error")
+
+			if finalStatus.Exit == 1 {
+				return false, nil
+			}
 			return true, nil
 		case err := <-errCh:
 			return false, err

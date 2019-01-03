@@ -102,18 +102,15 @@ func (s *ServerGateway) Start(addrs string) error {
 	mux.HandleFunc("/unregister/", s.Unregister)
 	s.server.Handler = mux
 
-	s.starter.Start()
-
 	return s.server.Serve(l)
 }
 
 // Stop closes the REST server gateway
 func (s *ServerGateway) Stop() error {
-	s.starter.Stop()
 	return s.server.Shutdown(context.Background())
 }
 
-// Update gets the service that needs to be updated and updates it
+// Check checks if there is an update for the given service
 // URI: /check/:service_name
 // Method: GET
 func (s *ServerGateway) Check(w http.ResponseWriter, r *http.Request) {
