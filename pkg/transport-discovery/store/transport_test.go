@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/watercompany/skywire-node/pkg/transport"
+	"github.com/watercompany/skywire/pkg/transport"
 )
 
 type TransportSuite struct {

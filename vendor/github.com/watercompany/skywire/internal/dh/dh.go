@@ -21,8 +21,19 @@ func (Secp256k1) GenerateKeypair(_ io.Reader) (noise.DHKey, error) {
 
 // DH helps to implement `noise.DHFunc`.
 func (Secp256k1) DH(sk, pk []byte) []byte {
-	ss := append(cipher.ECDH(cipher.NewPubKey(pk), cipher.NewSecKey(sk)), byte(0))
-	return ss
+	cipherPK, err := cipher.NewPubKey(pk)
+	if err != nil {
+		panic(err)
+	}
+	cipherSK, err := cipher.NewSecKey(sk)
+	if err != nil {
+		panic(err)
+	}
+	ecdh, err := cipher.ECDH(cipherPK, cipherSK)
+	if err != nil {
+		panic(err)
+	}
+	return append(ecdh, byte(0))
 }
 
 // DHLen helps to implement `noise.DHFunc`.

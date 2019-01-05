@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/skycoin/skycoin/src/cipher"
-	"github.com/watercompany/skywire-node/pkg/transport"
+	"github.com/watercompany/skywire/pkg/transport"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
 

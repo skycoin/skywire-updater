@@ -1,8 +1,10 @@
 package transport
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/binary"
+	"errors"
 	"io"
 	"sync"
 	"time"
@@ -10,11 +12,7 @@ import (
 	"github.com/flynn/noise"
 	"github.com/skycoin/skycoin/src/cipher"
 
-	"errors"
-
-	"bytes"
-
-	"github.com/watercompany/skywire-node/internal/dh"
+	"github.com/watercompany/skywire/internal/dh"
 )
 
 func init() {

@@ -2,7 +2,6 @@ package transport
 
 import (
 	"context"
-
 	"errors"
 
 	"github.com/skycoin/skycoin/src/cipher"
@@ -22,9 +21,14 @@ type NoiseFactory struct {
 
 // NewNoiseFactory creates a new noise factory from a secret key and another factory implementation
 func NewNoiseFactory(sk cipher.SecKey, factory Factory) *NoiseFactory {
+	pk, err := cipher.PubKeyFromSecKey(sk)
+	if err != nil {
+		panic(err) // TODO(evanlinjin): Is panicing the best solution here?
+	}
+
 	return &NoiseFactory{
 		transportConfig: &noiseTransportConfig{
-			StaticPublic: cipher.PubKeyFromSecKey(sk),
+			StaticPublic: pk,
 			StaticSecret: sk,
 		},
 		Factory: factory,
