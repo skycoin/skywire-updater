@@ -35,7 +35,11 @@ func (e *Entry) ToBinary() []byte {
 // Signature returns signature for Entry calculated from binary
 // representation.
 func (e *Entry) Signature(secKey cipher.SecKey) string {
-	return cipher.SignHash(cipher.SumSHA256(e.ToBinary()), secKey).Hex()
+	sig, err := cipher.SignHash(cipher.SumSHA256(e.ToBinary()), secKey)
+	if err != nil {
+		panic(err) // TODO(evanlinjin): Is panicing the best solution here?
+	}
+	return sig.Hex()
 }
 
 // SignedEntry holds an Entry and it's associated signatures.

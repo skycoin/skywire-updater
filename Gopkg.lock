@@ -25,8 +25,8 @@
     "internal/singleflight",
     "internal/util"
   ]
-  revision = "b3d9bf10f6666b2ee5100a6f3f84f4caf3b4e37d"
-  version = "v6.14.2"
+  revision = "7f89fbac80bcc62ce920b6dbc6ca60238d7725d1"
+  version = "v6.15.0"
 
 [[projects]]
   name = "github.com/google/uuid"
@@ -49,8 +49,8 @@
     "src/cipher/secp256k1-go",
     "src/cipher/secp256k1-go/secp256k1-go2"
   ]
-  revision = "5dcee17dd30b6f57d4711495934fa722a32e60a5"
-  version = "v0.24.1"
+  revision = "dbf18a068d25132bcb74d2d88954008955868168"
+  version = "v0.25.0"
 
 [[projects]]
   name = "github.com/stretchr/testify"
@@ -70,12 +70,12 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/watercompany/skywire-node"
+  name = "github.com/watercompany/skywire"
   packages = [
     "internal/dh",
     "pkg/transport"
   ]
-  revision = "9344ef1fe27504ca08f7d264b751d2d792e03b6f"
+  revision = "9e171e0006d23a759b5ee9775951dcfbd0a3242c"
 
 [[projects]]
   branch = "master"
@@ -89,17 +89,17 @@
     "internal/subtle",
     "poly1305"
   ]
-  revision = "505ab145d0a99da450461ae2c1a9f6cd10d1f447"
+  revision = "ff983b9c42bc9fbf91556e191cc8efb585c16908"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["cpu"]
-  revision = "b00e65af1da0681cde6c8227839a0ca53bbf16bb"
+  revision = "82a175fd1598e8a172e58ebdf5ed262bb29129e5"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "201b71dd25aa48d7bb94ea861786e339e290a69fc993259e356fadc955ef7802"
+  inputs-digest = "0c4432a824479a8153055f8ec0b53664e1197a196b8e30ca3e576ad433d313aa"
   solver-name = "gps-cdcl"
   solver-version = 1

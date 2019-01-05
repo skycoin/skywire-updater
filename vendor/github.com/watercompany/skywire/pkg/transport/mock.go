@@ -2,11 +2,10 @@ package transport
 
 import (
 	"context"
+	"errors"
 	"io"
 	"sync"
 	"time"
-
-	"errors"
 
 	"github.com/skycoin/skycoin/src/cipher"
 )
@@ -82,10 +81,15 @@ type pipeFactory struct {
 func newPipeFactory(sk cipher.SecKey, deliverer *pipeDeliverer) *pipeFactory {
 	reader, writer := io.Pipe()
 
+	pk, err := cipher.PubKeyFromSecKey(sk)
+	if err != nil {
+		panic(err) // TODO(evanlinjin): Is panicing the best solution here?
+	}
+
 	return &pipeFactory{
 		pipeDeliverer: deliverer,
 		staticSecret:  sk,
-		staticPublic:  cipher.PubKeyFromSecKey(sk),
+		staticPublic:  pk,
 		reader:        reader,
 		writer:        writer,
 	}
@@ -141,10 +145,16 @@ type MockTransport struct {
 // NewMockTransport creates a transport with the given secret key and remote public key, taking a writer
 // and a reader that will be used in the Write and Read operation
 func NewMockTransport(sk cipher.SecKey, remote cipher.PubKey, writer io.Writer, reader io.Reader) *MockTransport {
+
+	pk, err := cipher.PubKeyFromSecKey(sk)
+	if err != nil {
+		panic(err) // TODO(evanlinjin): Is panicing the best solution here?
+	}
+
 	return &MockTransport{
 		writer:  writer,
 		reader:  reader,
-		pk:      cipher.PubKeyFromSecKey(sk),
+		pk:      pk,
 		sk:      sk,
 		remote:  remote,
 		context: context.Background(),

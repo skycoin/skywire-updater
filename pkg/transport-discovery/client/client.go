@@ -15,7 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/skycoin/skycoin/src/cipher"
-	"github.com/watercompany/skywire-node/pkg/transport"
+	"github.com/watercompany/skywire/pkg/transport"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/api"
 	"github.com/watercompany/skywire-services/pkg/transport-discovery/store"
 )
@@ -126,7 +126,7 @@ func (c *APIClient) Do(req *http.Request) (*http.Response, error) {
 		fmt.Sprintf("%s%d", string(body), nonce),
 	))
 
-	sig := cipher.SignHash(hash, c.sec)
+	sig := cipher.MustSignHash(hash, c.sec)
 	if err != nil {
 		return nil, err
 	}

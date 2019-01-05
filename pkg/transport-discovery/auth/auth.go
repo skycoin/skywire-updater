@@ -17,10 +17,10 @@ func Hash(payload []byte, nonce store.Nonce) cipher.SHA256 {
 
 // Sign signs the Hash of payload and nonce
 func Sign(payload []byte, nonce store.Nonce, sec cipher.SecKey) cipher.Sig {
-	return cipher.SignHash(Hash(payload, nonce), sec)
+	return cipher.MustSignHash(Hash(payload, nonce), sec)
 }
 
 // Verify verifies the signature of the hash of payload and nonce
 func Verify(payload []byte, nonce store.Nonce, pub cipher.PubKey, sig cipher.Sig) error {
-	return cipher.VerifySignature(pub, sig, Hash(payload, nonce))
+	return cipher.VerifyPubKeySignedHash(pub, sig, Hash(payload, nonce))
 }
