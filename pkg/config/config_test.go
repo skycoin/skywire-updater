@@ -20,7 +20,7 @@ func TestServices(t *testing.T) {
 			CheckScript:                "generic-service-check-update.sh",
 			CheckScriptInterpreter:     "/bin/bash",
 			CheckScriptTimeout:         "20m",
-			ActiveUpdateChecker:        "naive",
+			ActiveUpdateChecker:        "simple",
 			Repository:                 "/skycoin/skywire",
 			Updater:                    "custom",
 		},
@@ -37,7 +37,7 @@ func TestServices(t *testing.T) {
 				"-address :5000",
 				"-web-port :6001",
 			},
-			ActiveUpdateChecker:    "naive",
+			ActiveUpdateChecker:    "simple",
 			CheckScript:            "generic-service-check-update.sh",
 			CheckScriptInterpreter: "/bin/bash",
 			CheckScriptTimeout:     "20m",
@@ -65,8 +65,8 @@ func TestUpdaters(t *testing.T) {
 
 func TestActiveUpdateChekers(t *testing.T) {
 	var expectedActiveUpdateChekcers = map[string]config.FetcherConfig{
-		"naive": {
-			Kind:      "naive",
+		"simple": {
+			Kind:      "simple",
 			NotifyURL: "http://localhost:8989/update",
 		},
 	}

@@ -3,7 +3,7 @@ scripts_directory: "$HOME/.skywire-updater/scripts"
 active_update_checkers:
   naive:
     notify_url: "http://localhost:8989/update"
-    kind: "naive"
+    kind: "simple"
 
 updaters:
   custom:

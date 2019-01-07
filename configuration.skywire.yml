@@ -1,8 +1,8 @@
 scripts_directory: "$HOME/.skywire-updater/scripts"
 
 active_update_checkers:
-  naive:
-    kind: "naive"
+  simple:
+    kind: "simple"
     notify_url: "http://localhost:8989/update"
 
 updaters:
@@ -21,7 +21,7 @@ services:
     check_script: "generic-service-check-update.sh"
     check_script_interpreter: "/bin/bash"
     check_script_timeout: "20m"
-    active_update_checker: "naive"
+    active_update_checker: "simple"
     repository: "/skycoin/skywire"
     updater: "custom"
 
@@ -37,7 +37,7 @@ services:
       - "-discovery-address discovery.skycoin.net:5999-034b1cd4ebad163e457fb805b3ba43779958bba49f2c5e1e8b062482904bacdb68"
       - "-address :5000"
       - "-web-port :6001"
-    active_update_checker: "naive"
+    active_update_checker: "simple"
     check_script: "generic-service-check-update.sh"
     check_script_interpreter: "/bin/bash"
     check_script_timeout: "20m"
