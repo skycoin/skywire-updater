@@ -1,0 +1,45 @@
+scripts_directory: "$HOME/.skywire-updater/scripts"
+
+active_update_checkers:
+  simple:
+    kind: "simple"
+    notify_url: "http://localhost:8989/update"
+
+updaters:
+  custom:
+    kind: "custom"
+
+services:
+  skywire-manager:
+    official_name: "skywire-manager"
+    local_name: "manager"
+    update_script: "skywire.sh"
+    update_script_interpreter: "/bin/bash"
+    update_script_timeout: "20m"
+    update_script_extra_arguments:
+      - "-web-dir ${GOPATH}/pkg/github.com/skycoin/skywire/static/skywire-manager"
+    check_script: "generic-service-check-update.sh"
+    check_script_interpreter: "/bin/bash"
+    check_script_timeout: "20m"
+    active_update_checker: "simple"
+    repository: "/skycoin/skywire"
+    updater: "custom"
+
+  skywire-node:
+    official_name: "skywire-node"
+    local_name: "node"
+    update_script: "skywire.sh"
+    update_script_interpreter: "/bin/bash"
+    update_script_timeout: "20m"
+    update_script_extra_arguments:
+      - "-connect-manager -manager-address 127.0.0.1:5998"
+      - "-manager-web 127.0.0.1:8000"
+      - "-discovery-address discovery.skycoin.net:5999-034b1cd4ebad163e457fb805b3ba43779958bba49f2c5e1e8b062482904bacdb68"
+      - "-address :5000"
+      - "-web-port :6001"
+    active_update_checker: "simple"
+    check_script: "generic-service-check-update.sh"
+    check_script_interpreter: "/bin/bash"
+    check_script_timeout: "20m"
+    repository: "/skycoin/skywire"
+    updater: "custom"

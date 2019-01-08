@@ -1,10 +1,12 @@
-skywire-version = testing
-
 lint: ## Run linters. Use make install-linters first.
-#	vendorcheck ./...
+	vendorcheck ./...
 	golangci-lint run -c .golangci.yml ./...
 	# The govet version in golangci-lint is out of date and has spurious warnings, run it separately
 	go vet -all ./...
+
+install:
+	mkdir -p ${HOME}/.skywire-updater
+	cp -r ./scripts ${HOME}/.skywire-updater/
 
 install-linters: ## Install linters
 	go get -u github.com/FiloSottile/vendorcheck
@@ -13,8 +15,9 @@ install-linters: ## Install linters
 	go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
 
 format: ## Formats the code. Must have goimports installed (use make install-linters).
-	goimports -w -local github.com/watercompany/skywire-services ./...
+	goimports -w -local github.com/watercompany/skywire-updater ./pkg
+	goimports -w -local github.com/watercompany/skywire-updater ./cmd
 
 test: ## Run tests for net
 	@mkdir -p coverage/
-	go test -tags no_ci -coverpkg="github.com/watercompany/skywire-services/..." -coverprofile=coverage/go-test-cmd.coverage.out -timeout=5m ./... -race
+	go test -coverpkg="github.com/watercompany/skywire-updater/..." -coverprofile=coverage/go-test-cmd.coverage.out -timeout=5m ./pkg/...
