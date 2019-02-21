@@ -18,6 +18,9 @@ format: ## Formats the code. Must have goimports installed (use make install-lin
 	goimports -w -local github.com/watercompany/skywire-updater ./pkg
 	goimports -w -local github.com/watercompany/skywire-updater ./cmd
 
+dep: ## sorts dependencies
+	GO111MODULE=on go mod vendor -v
+
 test: ## Run tests for net
 	@mkdir -p coverage/
-	go test -coverpkg="github.com/watercompany/skywire-updater/..." -coverprofile=coverage/go-test-cmd.coverage.out -timeout=5m ./pkg/...
+	go test -race -tags no_ci -cover -timeout=5m ./pkg/...

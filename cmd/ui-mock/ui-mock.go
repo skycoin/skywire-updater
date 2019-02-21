@@ -57,7 +57,7 @@ func (s *ServerGateway) Stop() error {
 
 // Update gets the service that needs to be updated and updates it
 // URI: /update
-func (s *ServerGateway) Update(w http.ResponseWriter, r *http.Request) {
+func (s *ServerGateway) Update(_ http.ResponseWriter, r *http.Request) {
 	var msg checker.NotifyMsg
 	defer r.Body.Close()
 	b := r.Body
