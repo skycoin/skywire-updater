@@ -1,0 +1,38 @@
+services:
+
+  skywire:
+    repo: "github.com/watercompany/skywire"
+    checker:
+      type: "script"
+      interpreter: "/bin/bash"
+      script: "check_bin_diff"
+      envs:
+        - "PROCESS=skywire-node"
+        - "BRANCH=master"
+    updater:
+      type: "script"
+      interpreter: "/bin/bash"
+      script: "update_skywire"
+
+  skywire-updater:
+    repo: "github.com/watercompany/skywire-updater"
+    checker:
+      type: "script"
+      interpreter: "/bin/bash"
+      script: "check_bin_diff"
+      envs:
+        - "PROCESS=skywire-updater"
+        - "BRANCH=master"
+    updater:
+      type: "script"
+      interpreter: "/bin/bash"
+      script: "update_generic"
+
+  skycoin:
+    repo: "github.com/skycoin/skycoin"
+    checker:
+      type: "github_release"
+    updater:
+      type: "script"
+      interpreter: "/bin/bash"
+      script: "update_to_release"
