@@ -44,7 +44,7 @@ func init() {
 var rootCmd = &cobra.Command{
 	Use:   "skywire-updater",
 	Short: "Updates skywire services",
-	PreRun: func(cmd *cobra.Command, args []string) {
+	PreRun: func(_ *cobra.Command, _ []string) {
 		checkEnv := func(key string) {
 			if _, ok := os.LookupEnv(key); !ok {
 				log.Fatalf("%s needs to be set", key)
@@ -56,7 +56,7 @@ var rootCmd = &cobra.Command{
 	},
 	Run: func(_ *cobra.Command, _ []string) {
 		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, os.Interrupt, os.Kill)
+		signal.Notify(sigCh, os.Interrupt)
 		defer close(sigCh)
 
 		db, err := store.NewJSON(dbPath)

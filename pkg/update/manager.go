@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	// ErrServiceNotFound ...
 	ErrServiceNotFound = errors.New("service of given name is not found")
 )
 
@@ -24,13 +25,15 @@ type srvEntry struct {
 	sync.Mutex
 }
 
+// Manager ...
 type Manager struct {
 	services map[string]srvEntry
 	mu       sync.RWMutex
-	db       store.Store // TODO(evanlinjin): Sort this out.
+	db       store.Store
 	log      *logging.Logger
 }
 
+// NewManager ...
 func NewManager(db store.Store, scriptsDir string, conf *Config) *Manager {
 	d := &Manager{
 		services: make(map[string]srvEntry),
@@ -50,6 +53,7 @@ func NewManager(db store.Store, scriptsDir string, conf *Config) *Manager {
 	return d
 }
 
+// Services ...
 func (d *Manager) Services() []string {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -62,6 +66,7 @@ func (d *Manager) Services() []string {
 	return srvNames
 }
 
+// Check ...
 func (d *Manager) Check(ctx context.Context, srvName string) (*Release, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -77,6 +82,7 @@ func (d *Manager) Check(ctx context.Context, srvName string) (*Release, error) {
 	return srv.Check(ctx)
 }
 
+// Update ...
 func (d *Manager) Update(ctx context.Context, srvName, toVersion string) (bool, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -103,6 +109,7 @@ func (d *Manager) Update(ctx context.Context, srvName, toVersion string) (bool, 
 	return updated, nil
 }
 
+// Close ...
 func (d *Manager) Close() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()

@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# ## LEGACY CODE FOR RESTART (generic)
+#
+#echo "## RESTARTING ##"
+#
+#run "cd ${bin_dir}"
+#
+#if [[ !${process_name}.pid ]]; then
+#    echo "no previous instance running or ${process_name}.pid doesn't exists"
+#else
+#    run "pkill -9 -F ${process_name}.pid"
+#fi
+#
+#nohup ./${process_name} ${args} > ${process_name}.log 2>&1 &echo $! > ${process_name}.pid &sleep 3
+
+
+# ## LEGACY CODE FOR RESTART (legacy_skywire)
+#
+#cd ${bin_dir}
+#pkill -9 -F ${process_name}.pid
+#
+#if [[ ${process_name} == "manager" ]]; then
+#    echo ${args}
+#    #nohup ./manager ${arguments} > /dev/null 2>&1 &sleep 3
+#    nohup ./manager ${args} > ${process_name}.log 2>&1 &echo $! > ${process_name}.pid &sleep 3
+#else
+#    #nohup ./node ${arguments} > /dev/null 2>&1 &sleep 3
+#    nohup ./node ${args} > ${process_name}.log 2>&1 &echo $! > ${process_name}.pid &sleep 3
+#fi
+
+exit 0

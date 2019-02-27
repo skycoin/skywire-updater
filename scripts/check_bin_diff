@@ -16,12 +16,14 @@ repo=${SKYUPD_REPO}
 args=$(eval echo $@)
 bin_dir="${GOBIN}"
 
-orig_branch=$(git rev-parse --abbrev-ref HEAD)
-temp_branch="temp/${BRANCH}"
-
 echo "## UPDATING REPOSITORY ##"
 
 run "go get -d -u ${repo}"
+run "cd ${GOPATH}/src/${repo}"
+
+orig_branch=$(git rev-parse --abbrev-ref HEAD)
+temp_branch="temp/${BRANCH}"
+
 run "git fetch --all --prune"
 run "git checkout ${BRANCH} -b ${temp_branch}"
 

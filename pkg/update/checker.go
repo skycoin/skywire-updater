@@ -14,11 +14,15 @@ import (
 	"github.com/watercompany/skywire-updater/pkg/store"
 )
 
+// CheckerType represents a Checker's type.
 type CheckerType string
 
 const (
+	// GithubReleaseCheckerType type.
 	GithubReleaseCheckerType = CheckerType("github_release")
-	ScriptCheckerType        = CheckerType("script")
+
+	// ScriptCheckerType type.
+	ScriptCheckerType = CheckerType("script")
 )
 
 var checkerTypes = []CheckerType{
@@ -26,6 +30,7 @@ var checkerTypes = []CheckerType{
 	ScriptCheckerType,
 }
 
+// Release is obtained from a check.
 type Release struct {
 	HasUpdate   bool            `json:"update_available"`
 	Version     string          `json:"release_version"`
@@ -34,10 +39,12 @@ type Release struct {
 	GitRelease  *GitReleaseBody `json:"git_release,omitempty"`
 }
 
+// Checker represents a Checker implementation.
 type Checker interface {
 	Check(ctx context.Context) (*Release, error)
 }
 
+// NewChecker creates a new Checker and panics on failure.
 func NewChecker(log *logging.Logger, db store.Store, srvName string, srvConfig ServiceConfig) Checker {
 	switch srvConfig.Checker.Type {
 	case GithubReleaseCheckerType:
@@ -51,12 +58,14 @@ func NewChecker(log *logging.Logger, db store.Store, srvName string, srvConfig S
 	}
 }
 
+// ScriptChecker checks via scripts.
 type ScriptChecker struct {
 	srvName string
 	c       ServiceConfig
 	log     *logging.Logger
 }
 
+// NewScriptChecker ...
 func NewScriptChecker(log *logging.Logger, srvName string, c ServiceConfig) *ScriptChecker {
 	return &ScriptChecker{
 		srvName: srvName,
@@ -65,9 +74,10 @@ func NewScriptChecker(log *logging.Logger, srvName string, c ServiceConfig) *Scr
 	}
 }
 
+// Check ...
 func (sc *ScriptChecker) Check(ctx context.Context) (*Release, error) {
 	check := sc.c.Checker
-	cmd := exec.Command(check.Interpreter, append([]string{check.Script}, check.Args...)...)
+	cmd := exec.Command(check.Interpreter, append([]string{check.Script}, check.Args...)...) //nolint:gosec
 	cmd.Env = sc.c.CheckerEnvs()
 	hasUpdate, err := executeScript(ctx, cmd, sc.log)
 	if err != nil {
@@ -80,6 +90,7 @@ func (sc *ScriptChecker) Check(ctx context.Context) (*Release, error) {
 	}, nil
 }
 
+// GithubReleaseChecker ...
 type GithubReleaseChecker struct {
 	srvName string
 	sc      ServiceConfig
@@ -87,6 +98,7 @@ type GithubReleaseChecker struct {
 	log     *logging.Logger
 }
 
+// NewGithubReleaseChecker ...
 func NewGithubReleaseChecker(log *logging.Logger, db store.Store, srvName string, sc ServiceConfig) *GithubReleaseChecker {
 	return &GithubReleaseChecker{
 		srvName: srvName,
@@ -96,6 +108,7 @@ func NewGithubReleaseChecker(log *logging.Logger, db store.Store, srvName string
 	}
 }
 
+// Check ...
 func (gc *GithubReleaseChecker) Check(ctx context.Context) (*Release, error) {
 	body, err := gc.fetchFromGit(ctx)
 	if err != nil {
@@ -116,6 +129,7 @@ func (gc *GithubReleaseChecker) Check(ctx context.Context) (*Release, error) {
 	}, nil
 }
 
+// GitReleaseBody ...
 type GitReleaseBody struct {
 	URL     string `json:"url,omitempty"`
 	TagName string `json:"tag_name,omitempty"`
@@ -123,6 +137,7 @@ type GitReleaseBody struct {
 	Body    string `json:"body,omitempty"`
 }
 
+// ParsePubAt ...
 func (grb GitReleaseBody) ParsePubAt() (time.Time, error) {
 	return time.Parse(time.RFC3339, grb.PubAt)
 }

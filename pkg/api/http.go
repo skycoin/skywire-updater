@@ -14,12 +14,14 @@ import (
 
 var log = logging.MustGetLogger("api")
 
+// Gateway provides the API gateway.
 type Gateway interface {
 	Services() []string
 	Check(ctx context.Context, srvName string) (*update.Release, error)
 	Update(ctx context.Context, srvName, toVersion string) (bool, error)
 }
 
+// HandleHTTP makes a http.Handler from a Gateway implementation.
 func HandleHTTP(g Gateway) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/services", services(g))
@@ -29,16 +31,12 @@ func HandleHTTP(g Gateway) http.Handler {
 }
 
 func services(g Gateway) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		WriteJSON(w, http.StatusOK, g.Services())
 	}
 }
 
 func checkService(g Gateway) http.HandlerFunc {
-	type Response struct {
-		UpdateAvailable bool        `json:"update_available"`
-		Release         interface{} `json:"update,omitempty"`
-	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		var (
 			pSrv = chi.URLParam(r, "srv")

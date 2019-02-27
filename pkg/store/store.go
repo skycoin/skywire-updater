@@ -11,21 +11,25 @@ import (
 	"github.com/skycoin/skycoin/src/util/logging"
 )
 
+// Update represents an update entry.
 type Update struct {
 	Tag       string `json:"tag,omitempty"`
 	Timestamp int64  `json:"timestamp"`
 }
 
+// IsEmpty checks whether the update is empty.
 func (u Update) IsEmpty() bool {
 	return u.Tag == "" && u.Timestamp == 0
 }
 
+// Store represents a database implementation.
 type Store interface {
 	ServiceLastUpdate(srvName string) Update
 	SetServiceLastUpdate(srvName string, last Update)
 	Close() error
 }
 
+// JSON implements Store.
 type JSON struct {
 	*os.File
 	data map[string]Update // key: srvName, value: Update
@@ -33,6 +37,7 @@ type JSON struct {
 	log  *logging.Logger
 }
 
+// NewJSON creates a new JSON Store implementation.
 func NewJSON(filePath string) (*JSON, error) {
 	db := &JSON{
 		data: make(map[string]Update),
@@ -56,6 +61,7 @@ func NewJSON(filePath string) (*JSON, error) {
 	return db, nil
 }
 
+// ServiceLastUpdate obtains the last update for a given service..
 func (j *JSON) ServiceLastUpdate(srvName string) Update {
 	j.mu.RLock()
 	defer j.mu.RUnlock()
@@ -68,6 +74,7 @@ func (j *JSON) ServiceLastUpdate(srvName string) Update {
 	return update
 }
 
+// SetServiceLastUpdate sets a last update for a given service.
 func (j *JSON) SetServiceLastUpdate(srvName string, last Update) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
@@ -75,15 +82,11 @@ func (j *JSON) SetServiceLastUpdate(srvName string, last Update) {
 	j.data[srvName] = last
 	if err := j.Truncate(0); err != nil {
 		j.log.WithError(err).Fatal()
-		return
 	}
 	if _, err := j.Seek(0, 0); err != nil {
 		j.log.WithError(err).Fatal()
-		return
 	}
 	if err := json.NewEncoder(j).Encode(&j.data); err != nil {
 		j.log.WithError(err).Fatal()
-		return
 	}
-	return
 }

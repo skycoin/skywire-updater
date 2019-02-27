@@ -1,6 +1,7 @@
 package update
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -35,44 +36,51 @@ type ServiceConfig struct {
 	Updater UpdaterConfig `yaml:"updater"`
 }
 
-func (sc *ServiceConfig) FillDefaults() error {
+func (sc *ServiceConfig) fillDefaults() {
 	if sc.Repo != "" {
 		if sc.Checker.Type == "" {
 			sc.Checker.Type = ScriptCheckerType
 		}
-		if sc.Checker.Interpreter == "" {
+		if sc.Checker.Type == ScriptCheckerType && sc.Checker.Interpreter == "" {
 			sc.Checker.Interpreter = "/bin/bash"
-		}
-		if sc.Checker.Script == "" {
-			sc.Checker.Script = "check_generic"
 		}
 		if sc.Updater.Type == "" {
 			sc.Updater.Type = ScriptUpdaterType
 		}
-		if sc.Updater.Interpreter == "" {
+		if sc.Updater.Type == ScriptUpdaterType && sc.Updater.Interpreter == "" {
 			sc.Updater.Interpreter = "/bin/bash"
 		}
-		if sc.Updater.Script == "" {
-			sc.Updater.Script = "update_generic"
-		}
+	}
+}
+
+func (sc *ServiceConfig) validate() error {
+	if sc.Checker.Type == ScriptCheckerType && sc.Checker.Script == "" {
+		return errors.New("checker.script needs to be defined")
+	}
+	if sc.Updater.Type == ScriptUpdaterType && sc.Updater.Script == "" {
+		return errors.New("checker.script needs to be defined")
 	}
 	return nil
 }
 
+// Envs ...
 func (sc ServiceConfig) Envs() []string {
 	return append(os.Environ(), []string{
 		cmdEnv(EnvRepo, sc.Repo),
 	}...)
 }
 
+// CheckerEnvs ...
 func (sc ServiceConfig) CheckerEnvs() []string {
 	return append(sc.Envs(), sc.Checker.Envs...)
 }
 
+// UpdaterEnvs ...
 func (sc ServiceConfig) UpdaterEnvs() []string {
 	return append(sc.Envs(), sc.Updater.Envs...)
 }
 
+// CheckerConfig ...
 type CheckerConfig struct {
 	Type CheckerType `yaml:"type"`
 
@@ -83,6 +91,7 @@ type CheckerConfig struct {
 	Envs        []string `yaml:"envs"`
 }
 
+// UpdaterConfig ...
 type UpdaterConfig struct {
 	Type UpdaterType `json:"type"`
 
@@ -107,7 +116,8 @@ func NewConfig(path string) (*Config, error) {
 	}
 
 	for name, srv := range conf.Services {
-		if err := srv.FillDefaults(); err != nil {
+		srv.fillDefaults()
+		if err := srv.validate(); err != nil {
 			return nil, fmt.Errorf("invalid service %s: %s", name, err.Error())
 		}
 	}

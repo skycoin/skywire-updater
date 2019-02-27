@@ -1,4 +1,4 @@
-FROM golang:1.10.3-alpine as build
+FROM golang:1.11.5-alpine as build
 
 ARG GOOS=linux
 
