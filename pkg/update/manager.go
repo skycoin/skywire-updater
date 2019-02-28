@@ -56,13 +56,12 @@ func NewManager(db store.Store, scriptsDir string, conf *Config) *Manager {
 // Services ...
 func (d *Manager) Services() []string {
 	d.mu.RLock()
-	defer d.mu.RUnlock()
-
 	var srvNames []string
 	for srvName := range d.services {
 		srvNames = append(srvNames, srvName)
 	}
 	sort.Strings(srvNames)
+	d.mu.RUnlock()
 	return srvNames
 }
 
@@ -77,9 +76,10 @@ func (d *Manager) Check(ctx context.Context, srvName string) (*Release, error) {
 	}
 
 	srv.Lock()
-	defer srv.Unlock()
+	release, err := srv.Check(ctx)
+	srv.Unlock()
 
-	return srv.Check(ctx)
+	return release, err
 }
 
 // Update ...
@@ -112,7 +112,8 @@ func (d *Manager) Update(ctx context.Context, srvName, toVersion string) (bool, 
 // Close ...
 func (d *Manager) Close() error {
 	d.mu.Lock()
-	defer d.mu.Unlock()
+	err := d.db.Close()
+	d.mu.Unlock()
 
-	return d.db.Close()
+	return err
 }

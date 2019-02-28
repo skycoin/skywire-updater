@@ -108,6 +108,6 @@ func WriteJSON(w http.ResponseWriter, code int, v interface{}) {
 		}
 	}
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		panic(err)
+		log.WithError(err).Fatal()
 	}
 }
