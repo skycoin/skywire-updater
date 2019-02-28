@@ -1,0 +1,55 @@
+#!/bin/bash
+
+run() {
+    echo "RUNNING: '${1}' ..."
+    ${1}
+    exit_code=$?
+    if [[ ${exit_code} != 0 ]]; then
+        >&2 echo "command '${1}' failed with exit code '${exit_code}'"
+        exit 2
+    fi
+}
+
+export GO111MODULE=on
+
+temp_dir=`mktemp -d`
+repo=${SKYUPD_REPO}
+bin_dir=${BIN_DIR}
+app_dir=${APP_DIR}
+
+echo "## CLONE FROM GITHUB ##"
+run "git clone https://${repo}.git ${temp_dir}" # TODO(evanlinjin): Clone to release/version.
+
+echo "## PREPARE DEPENDENCIES ##"
+run "cd ${temp_dir}"
+run "go mod download"
+
+echo "## BUILD MAIN EXECUTABLES ##"
+build() {
+    process=${1}
+    run "cd ${temp_dir}/cmd/${process}"
+    run "go build -o ${bin_dir}/${process}"
+}
+build skywire-node
+build skywire-cli
+build therealssh-cli
+build manager-node
+
+echo "## BUILD APPS ##"
+build_app() {
+    app=${1}
+    run "cd ${temp_dir}/cmd/apps/${app}"
+    run "go build -o ${app_dir}/${app}"
+}
+build_app chat
+build_app helloworld
+build_app therealproxy
+build_app therealproxy-client
+build_app therealssh
+build_app therealssh-client
+
+echo "## CLEAN UP ##"
+run "rm -rf ${temp_dir}"
+
+echo "DONE"
+exit 0

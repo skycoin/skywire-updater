@@ -15,6 +15,14 @@ const (
 	// service.
 	EnvRepo = "SKYUPD_REPO"
 
+	// EnvMainBranch can be used by a script to determine the main branch fo the
+	// service.
+	EnvMainBranch = "SKYUPD_MAIN_BRANCH"
+
+	// EnvMainProcess can be used by a script to determine the main process name
+	// for the service.
+	EnvMainProcess = "SKYUPD_MAIN_PROCESS"
+
 	// EnvToVersion can be used by an updater script to determine the version
 	// to update the service to.
 	EnvToVersion = "SKYUPD_TO_VERSION"
@@ -31,13 +39,18 @@ type Config struct {
 
 // ServiceConfig represents one of the services to be updated
 type ServiceConfig struct {
-	Repo    string        `yaml:"repo"`
-	Checker CheckerConfig `yaml:"checker"`
-	Updater UpdaterConfig `yaml:"updater"`
+	Repo        string        `yaml:"repo"`
+	MainBranch  string        `yaml:"main-branch"`
+	MainProcess string        `yaml:"main-process"`
+	Checker     CheckerConfig `yaml:"checker"`
+	Updater     UpdaterConfig `yaml:"updater"`
 }
 
 func (sc *ServiceConfig) fillDefaults() {
 	if sc.Repo != "" {
+		if sc.MainBranch == "" {
+			sc.MainBranch = "master"
+		}
 		if sc.Checker.Type == "" {
 			sc.Checker.Type = ScriptCheckerType
 		}
@@ -67,6 +80,8 @@ func (sc *ServiceConfig) validate() error {
 func (sc ServiceConfig) Envs() []string {
 	return append(os.Environ(), []string{
 		cmdEnv(EnvRepo, sc.Repo),
+		cmdEnv(EnvMainBranch, sc.MainBranch),
+		cmdEnv(EnvMainProcess, sc.MainProcess),
 	}...)
 }
 

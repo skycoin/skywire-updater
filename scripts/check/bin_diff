@@ -1,0 +1,48 @@
+#!/bin/bash
+
+run() {
+    echo "RUNNING: '${1}' ..."
+    ${1}
+    exit_code=$?
+    if [[ ${exit_code} != 0 ]]; then
+        >&2 echo "command '${1}' failed with exit code '${exit_code}'"
+        exit 2
+    fi
+}
+
+export GO111MODULE=on
+
+temp_dir=`mktemp -d`
+repo=${SKYUPD_REPO}
+branch=${SKYUPD_MAIN_BRANCH}
+process=${SKYUPD_MAIN_PROCESS}
+bin_dir=${BIN_DIR}
+
+echo "## CLONING FROM GITHUB ##"
+run "git clone -b ${branch} https://${repo}.git ${temp_dir}"
+
+echo "## PREPARE DEPENDENCIES ##"
+run "cd ${temp_dir}"
+run "go mod download"
+
+echo "## BUILD ##"
+run "cd ${temp_dir}/cmd/${process}"
+run "go build"
+
+echo "## COMPARE BINARIES ##"
+orig_file="${bin_dir}/${process}"
+new_file="${temp_dir}/cmd/${process}/${process}"
+
+echo "comparing '${orig_file}' with '${new_file}' ..."
+if diff ${orig_file} ${new_file} > /dev/null 2>&1; then
+    echo "NO UPDATE FOUND"
+    final_code=1
+else
+    echo "UPDATE FOUND"
+    final_code=0
+fi
+
+echo "## CLEAN UP ##"
+run "rm -rf ${temp_dir}"
+
+exit ${final_code}

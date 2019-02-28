@@ -14,7 +14,7 @@ import (
 // executes the provided script and logs stdout.
 func executeScript(ctx context.Context, cmd *exec.Cmd, log *logging.Logger) (bool, error) {
 	script := filepath.Base(cmd.Args[1])
-	args   := cmd.Args
+	args := cmd.Args
 
 	log.Infof("(SCRIPT:%s) START %v", script, args)
 	defer log.Infof("(SCRIPT:%s) END %v", script, args)

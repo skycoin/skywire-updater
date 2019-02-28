@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 
 	"github.com/skycoin/skycoin/src/util/logging"
 	"github.com/spf13/cobra"
@@ -27,11 +26,11 @@ var (
 
 func init() {
 	// defaults.
-	configPath = filepath.Join(os.Getenv("GOPATH"), "src/github.com/watercompany/skywire-updater/config.skywire.yml")
-	dbPath     = filepath.Join(os.Getenv("HOME"), ".skywire/updater/db.json")
-	scriptsDir = filepath.Join(os.Getenv("GOPATH"), "src/github.com/watercompany/skywire-updater/scripts")
-	httpAddr   = ":6781"
-	rpcAddr    = ":6782"
+	configPath = "./config.skywire.yml"
+	dbPath = "./db.json"
+	scriptsDir = "./scripts"
+	httpAddr = ":6781"
+	rpcAddr = ":6782"
 
 	// flags.
 	rootCmd.PersistentFlags().StringVar(&configPath, "config-file", configPath, "path to updater's configuration file")
@@ -44,16 +43,6 @@ func init() {
 var rootCmd = &cobra.Command{
 	Use:   "skywire-updater",
 	Short: "Updates skywire services",
-	PreRun: func(_ *cobra.Command, _ []string) {
-		checkEnv := func(key string) {
-			if _, ok := os.LookupEnv(key); !ok {
-				log.Fatalf("%s needs to be set", key)
-			}
-		}
-		for _, key := range []string{"HOME", "GOPATH"} {
-			checkEnv(key)
-		}
-	},
 	Run: func(_ *cobra.Command, _ []string) {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, os.Interrupt)

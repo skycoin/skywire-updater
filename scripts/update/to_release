@@ -1,0 +1,38 @@
+#!/bin/bash
+
+run() {
+    echo "RUNNING: '${1}' ..."
+    ${1}
+    exit_code=$?
+    if [[ ${exit_code} != 0 ]]; then
+        >&2 echo "command '${1}' failed with exit code '${exit_code}'"
+        exit 2
+    fi
+}
+
+export GO111MODULE=on
+
+temp_dir=`mktemp -d`
+repo=${SKYUPD_REPO}
+to_version=${SKYUPD_TO_VERSION}
+process=${SKYUPD_MAIN_PROCESS}
+bin_dir=${BIN_DIR}
+
+echo "## CLONE FROM GITHUB ##"
+# https://stackoverflow.com/questions/791959/download-a-specific-tag-with-git
+run "git clone https://${repo}.git ${temp_dir}"
+run "cd ${temp_dir}"
+run "git checkout tags/${to_version}"
+
+echo "## PREPARE DEPENDENCIES ##"
+run "go mod download"
+
+echo "## BUILD ##"
+run "cd ${temp_dir}/cmd/${process}"
+run "go build -o ${bin_dir}/${process}"
+
+echo "## CLEAN UP ##"
+run "rm -rf ${temp_dir}"
+
+echo "DONE"
+exit 0

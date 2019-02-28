@@ -31,7 +31,7 @@ func TestCustomUpdater_Update(t *testing.T) {
 
 	t.Run("ScriptUpdater", func(t *testing.T) {
 		c := ServiceConfig{
-			Repo:    "domain.com/org/repo",
+			Repo: "domain.com/org/repo",
 			Updater: UpdaterConfig{
 				Type:        ScriptUpdaterType,
 				Interpreter: "/bin/bash",
@@ -39,7 +39,7 @@ func TestCustomUpdater_Update(t *testing.T) {
 				Args:        []string{"arg1"},
 			},
 		}
-		updater := NewUpdater(logging.MustGetLogger("my_service"),"my_service", c)
+		updater := NewUpdater(logging.MustGetLogger("my_service"), "my_service", c)
 
 		ok, err := updater.Update(context.TODO(), "v1.0")
 		assert.NoError(t, err)
