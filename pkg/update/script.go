@@ -12,7 +12,7 @@ import (
 )
 
 // executes the provided script and logs stdout.
-func executeScript(ctx context.Context, cmd *exec.Cmd, log *logging.Logger) (bool, error) {
+func executeScript(ctx context.Context, log *logging.Logger, cmd *exec.Cmd) (bool, error) {
 	script := filepath.Base(cmd.Args[1])
 	args := cmd.Args
 
@@ -46,6 +46,7 @@ func executeScript(ctx context.Context, cmd *exec.Cmd, log *logging.Logger) (boo
 		select {
 		case <-done:
 		case <-ctx.Done():
+			log.Infof("(SCRIPT:%s) Context closed.")
 			// Signal the process group (-pid), not just the process, so that
 			// the process and all its children are signaled. Else, child procs
 			// can keep running and keep the stdout/stderr fd open and cause

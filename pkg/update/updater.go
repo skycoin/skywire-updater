@@ -7,11 +7,11 @@ import (
 	"github.com/skycoin/skycoin/src/util/logging"
 )
 
-// UpdaterType ...
+// UpdaterType determines the updater type.
 type UpdaterType string
 
 const (
-	// ScriptUpdaterType ...
+	// ScriptUpdaterType represents the script updater type.
 	ScriptUpdaterType = UpdaterType("script")
 )
 
@@ -19,12 +19,12 @@ var updaterTypes = []UpdaterType{
 	ScriptUpdaterType,
 }
 
-// Updater ...
+// Updater updates a given service.
 type Updater interface {
 	Update(ctx context.Context, toVersion string) (bool, error)
 }
 
-// NewUpdater ...
+// NewUpdater creates a new updater.
 func NewUpdater(log *logging.Logger, srvName string, srvConfig ServiceConfig) Updater {
 	switch srvConfig.Updater.Type {
 	case ScriptUpdaterType:
@@ -36,14 +36,14 @@ func NewUpdater(log *logging.Logger, srvName string, srvConfig ServiceConfig) Up
 	}
 }
 
-// ScriptUpdater ...
+// ScriptUpdater is an implementation of updater using scripts.
 type ScriptUpdater struct {
 	srvName string
 	c       ServiceConfig
 	log     *logging.Logger
 }
 
-// NewScriptUpdater ...
+// NewScriptUpdater creates a new ScriptUpdater.
 func NewScriptUpdater(log *logging.Logger, srvName string, c ServiceConfig) *ScriptUpdater {
 	return &ScriptUpdater{
 		srvName: srvName,
@@ -52,11 +52,11 @@ func NewScriptUpdater(log *logging.Logger, srvName string, c ServiceConfig) *Scr
 	}
 }
 
-// Update ...
+// Update updates the given service to specified version.
 func (cu *ScriptUpdater) Update(ctx context.Context, version string) (bool, error) {
 	update := cu.c.Updater
 	cmd := exec.Command(update.Interpreter, append([]string{update.Script}, update.Args...)...) //nolint:gosec
-	cmd.Env = append(cu.c.UpdaterEnvs(), cmdEnv(EnvToVersion, version))
+	cmd.Env = append(cu.c.updaterEnvs(), cmdEnv(EnvToVersion, version))
 
-	return executeScript(ctx, cmd, cu.log)
+	return executeScript(ctx, cu.log, cmd)
 }

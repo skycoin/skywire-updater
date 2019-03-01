@@ -65,7 +65,7 @@ type ScriptChecker struct {
 	log     *logging.Logger
 }
 
-// NewScriptChecker ...
+// NewScriptChecker uses a given script as a checker.
 func NewScriptChecker(log *logging.Logger, srvName string, c ServiceConfig) *ScriptChecker {
 	return &ScriptChecker{
 		srvName: srvName,
@@ -74,12 +74,12 @@ func NewScriptChecker(log *logging.Logger, srvName string, c ServiceConfig) *Scr
 	}
 }
 
-// Check ...
+// Check checks for updates.
 func (sc *ScriptChecker) Check(ctx context.Context) (*Release, error) {
 	check := sc.c.Checker
 	cmd := exec.Command(check.Interpreter, append([]string{check.Script}, check.Args...)...) //nolint:gosec
-	cmd.Env = sc.c.CheckerEnvs()
-	hasUpdate, err := executeScript(ctx, cmd, sc.log)
+	cmd.Env = sc.c.checkerEnvs()
+	hasUpdate, err := executeScript(ctx, sc.log, cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (sc *ScriptChecker) Check(ctx context.Context) (*Release, error) {
 	}, nil
 }
 
-// GithubReleaseChecker ...
+// GithubReleaseChecker checks for available updates via the github API.
 type GithubReleaseChecker struct {
 	srvName string
 	sc      ServiceConfig
@@ -98,7 +98,7 @@ type GithubReleaseChecker struct {
 	log     *logging.Logger
 }
 
-// NewGithubReleaseChecker ...
+// NewGithubReleaseChecker creates a new GithubReleaseChecker.
 func NewGithubReleaseChecker(log *logging.Logger, db store.Store, srvName string, sc ServiceConfig) *GithubReleaseChecker {
 	return &GithubReleaseChecker{
 		srvName: srvName,
@@ -108,7 +108,7 @@ func NewGithubReleaseChecker(log *logging.Logger, db store.Store, srvName string
 	}
 }
 
-// Check ...
+// Check checks for updates.
 func (gc *GithubReleaseChecker) Check(ctx context.Context) (*Release, error) {
 	body, err := gc.fetchFromGit(ctx)
 	if err != nil {
@@ -129,7 +129,7 @@ func (gc *GithubReleaseChecker) Check(ctx context.Context) (*Release, error) {
 	}, nil
 }
 
-// GitReleaseBody ...
+// GitReleaseBody is the response body of the github API call.
 type GitReleaseBody struct {
 	URL     string `json:"url,omitempty"`
 	TagName string `json:"tag_name,omitempty"`
@@ -137,7 +137,7 @@ type GitReleaseBody struct {
 	Body    string `json:"body,omitempty"`
 }
 
-// ParsePubAt ...
+// ParsePubAt parses the published_at field.
 func (grb GitReleaseBody) ParsePubAt() (time.Time, error) {
 	return time.Parse(time.RFC3339, grb.PubAt)
 }

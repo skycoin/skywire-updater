@@ -76,8 +76,7 @@ func (sc *ServiceConfig) validate() error {
 	return nil
 }
 
-// Envs ...
-func (sc ServiceConfig) Envs() []string {
+func (sc ServiceConfig) serviceEnvs() []string {
 	return append(os.Environ(), []string{
 		cmdEnv(EnvRepo, sc.Repo),
 		cmdEnv(EnvMainBranch, sc.MainBranch),
@@ -85,17 +84,15 @@ func (sc ServiceConfig) Envs() []string {
 	}...)
 }
 
-// CheckerEnvs ...
-func (sc ServiceConfig) CheckerEnvs() []string {
-	return append(sc.Envs(), sc.Checker.Envs...)
+func (sc ServiceConfig) checkerEnvs() []string {
+	return append(sc.serviceEnvs(), sc.Checker.Envs...)
 }
 
-// UpdaterEnvs ...
-func (sc ServiceConfig) UpdaterEnvs() []string {
-	return append(sc.Envs(), sc.Updater.Envs...)
+func (sc ServiceConfig) updaterEnvs() []string {
+	return append(sc.serviceEnvs(), sc.Updater.Envs...)
 }
 
-// CheckerConfig ...
+// CheckerConfig is the configuration for a service's checker.
 type CheckerConfig struct {
 	Type CheckerType `yaml:"type"`
 
@@ -106,7 +103,7 @@ type CheckerConfig struct {
 	Envs        []string `yaml:"envs"`
 }
 
-// UpdaterConfig ...
+// UpdaterConfig is the configuration for a service's updater.
 type UpdaterConfig struct {
 	Type UpdaterType `json:"type"`
 

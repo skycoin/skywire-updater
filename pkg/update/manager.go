@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	// ErrServiceNotFound ...
+	// ErrServiceNotFound occurs when service is not found.
 	ErrServiceNotFound = errors.New("service of given name is not found")
 )
 
@@ -25,7 +25,7 @@ type srvEntry struct {
 	sync.Mutex
 }
 
-// Manager ...
+// Manager manages checkers and updaters for services.
 type Manager struct {
 	services map[string]srvEntry
 	mu       sync.RWMutex
@@ -33,12 +33,12 @@ type Manager struct {
 	log      *logging.Logger
 }
 
-// NewManager ...
+// NewManager creates a new manager.
 func NewManager(db store.Store, scriptsDir string, conf *Config) *Manager {
 	d := &Manager{
 		services: make(map[string]srvEntry),
 		db:       db,
-		log:      logging.MustGetLogger("daemon"),
+		log:      logging.MustGetLogger("manager"),
 	}
 	for srvName := range conf.Services {
 		srvConf := *conf.Services[srvName]
@@ -46,14 +46,14 @@ func NewManager(db store.Store, scriptsDir string, conf *Config) *Manager {
 		srvConf.Updater.Script = path.Join(scriptsDir, srvConf.Updater.Script)
 		d.services[srvName] = srvEntry{
 			ServiceConfig: srvConf,
-			Checker:       NewChecker(logging.MustGetLogger(srvName+".checker"), db, srvName, srvConf),
-			Updater:       NewUpdater(logging.MustGetLogger(srvName+".updater"), srvName, srvConf),
+			Checker:       NewChecker(logging.MustGetLogger("checker("+srvName+")"), db, srvName, srvConf),
+			Updater:       NewUpdater(logging.MustGetLogger("updater("+srvName+")"), srvName, srvConf),
 		}
 	}
 	return d
 }
 
-// Services ...
+// Services lists the available services.
 func (d *Manager) Services() []string {
 	d.mu.RLock()
 	var srvNames []string
@@ -65,7 +65,7 @@ func (d *Manager) Services() []string {
 	return srvNames
 }
 
-// Check ...
+// Check checks for updates for a given service.
 func (d *Manager) Check(ctx context.Context, srvName string) (*Release, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -82,7 +82,7 @@ func (d *Manager) Check(ctx context.Context, srvName string) (*Release, error) {
 	return release, err
 }
 
-// Update ...
+// Update updates given service to provided version.
 func (d *Manager) Update(ctx context.Context, srvName, toVersion string) (bool, error) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
@@ -93,12 +93,13 @@ func (d *Manager) Update(ctx context.Context, srvName, toVersion string) (bool, 
 	}
 
 	srv.Lock()
-	defer srv.Unlock()
-
 	updated, err := srv.Update(ctx, toVersion)
+	srv.Unlock()
+
 	if err != nil {
 		return false, err
 	}
+
 	if updated {
 		entry := store.Update{
 			Tag:       toVersion,
@@ -106,10 +107,11 @@ func (d *Manager) Update(ctx context.Context, srvName, toVersion string) (bool, 
 		}
 		d.db.SetServiceLastUpdate(srvName, entry)
 	}
+
 	return updated, nil
 }
 
-// Close ...
+// Close closes the manager.
 func (d *Manager) Close() error {
 	d.mu.Lock()
 	err := d.db.Close()
