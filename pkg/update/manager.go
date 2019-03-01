@@ -70,9 +70,9 @@ func (d *Manager) Services() []string {
 // Check checks for updates for a given service.
 func (d *Manager) Check(ctx context.Context, srvName string) (*Release, error) {
 	d.mu.RLock()
-	defer d.mu.RUnlock()
-
 	srv, ok := d.services[srvName]
+	d.mu.RUnlock()
+
 	if !ok {
 		return nil, ErrServiceNotFound
 	}
@@ -87,9 +87,9 @@ func (d *Manager) Check(ctx context.Context, srvName string) (*Release, error) {
 // Update updates given service to provided version.
 func (d *Manager) Update(ctx context.Context, srvName, toVersion string) (bool, error) {
 	d.mu.RLock()
-	defer d.mu.RUnlock()
-
 	srv, ok := d.services[srvName]
+	d.mu.RUnlock()
+
 	if !ok {
 		return false, ErrServiceNotFound
 	}
@@ -116,8 +116,7 @@ func (d *Manager) Update(ctx context.Context, srvName, toVersion string) (bool, 
 // Close closes the manager.
 func (d *Manager) Close() error {
 	d.mu.Lock()
-	err := d.db.Close()
+	d.services = make(map[string]srvEntry)
 	d.mu.Unlock()
-
-	return err
+	return d.db.Close()
 }
