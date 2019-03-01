@@ -1,9 +1,8 @@
 default:
   main-branch: "master"
   interpreter: "/bin/bash"
-  envs:
-    - "BIN_DIR=./bin" # TODO: properly define.
-    - "APP_DIR=./bin" # TODO: properly define.
+  envs: - "BIN_DIR=./bin" # TODO: properly define.
+        - "APP_DIR=./bin" # TODO: properly define.
 
 services:
   skywire:

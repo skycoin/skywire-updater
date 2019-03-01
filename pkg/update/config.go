@@ -15,6 +15,15 @@ type DefaultConfig struct {
 	Envs        []string `yaml:"envs"`
 }
 
+func (dc *DefaultConfig) fillDefaults() {
+	if dc.MainBranch == "" {
+		dc.MainBranch = "master"
+	}
+	if dc.Interpreter == "" {
+		dc.Interpreter = "/bin/bash"
+	}
+}
+
 // ServiceConfig represents one of the services to be updated
 type ServiceConfig struct {
 	Repo        string        `yaml:"repo"`
@@ -65,6 +74,7 @@ func NewConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
+	conf.Default.fillDefaults()
 	for name, srv := range conf.Services {
 		srv.fillDefaults(&conf.Default)
 		if err := srv.validate(); err != nil {
@@ -78,31 +88,19 @@ func NewConfig(path string) (*Config, error) {
 func (sc *ServiceConfig) fillDefaults(d *DefaultConfig) {
 	if sc.Repo != "" {
 		if sc.MainBranch == "" {
-			if d.MainBranch != "" {
-				sc.MainBranch = d.MainBranch
-			} else {
-				sc.MainBranch = "master"
-			}
+			sc.MainBranch = d.MainBranch
 		}
 		if sc.Checker.Type == "" {
 			sc.Checker.Type = ScriptCheckerType
 		}
 		if sc.Checker.Type == ScriptCheckerType && sc.Checker.Interpreter == "" {
-			if d.Interpreter != "" {
-				sc.Checker.Interpreter = d.Interpreter
-			} else {
-				sc.Checker.Interpreter = "/bin/bash"
-			}
+			sc.Checker.Interpreter = d.Interpreter
 		}
 		if sc.Updater.Type == "" {
 			sc.Updater.Type = ScriptUpdaterType
 		}
 		if sc.Updater.Type == ScriptUpdaterType && sc.Updater.Interpreter == "" {
-			if d.Interpreter != "" {
-				sc.Updater.Interpreter = d.Interpreter
-			} else {
-				sc.Updater.Interpreter = "/bin/bash"
-			}
+			sc.Updater.Interpreter = d.Interpreter
 		}
 	}
 }

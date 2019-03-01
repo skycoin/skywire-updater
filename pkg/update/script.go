@@ -37,13 +37,13 @@ func ExecuteScript(ctx context.Context, log *logging.Logger, cmd *exec.Cmd) (boo
 		select {
 		case <-done:
 		case <-ctx.Done():
-			l.Info("Context closed.")
+			l.Info("Context closed")
 			// Signal the process group (-pid), not just the process, so that
 			// the process and all its children are signaled. Else, child procs
 			// can keep running and keep the stdout/stderr fd open and cause
 			// cmd.Wait to hang.
 			if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM); err != nil {
-				log.WithError(err).Error("[ERROR] syscall.Kill returned error")
+				l.WithError(err).Error("syscall.Kill returned error")
 			}
 		}
 	}()
