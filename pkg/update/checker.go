@@ -3,7 +3,9 @@ package update
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"path"
 	"strings"
@@ -45,15 +47,15 @@ type Checker interface {
 }
 
 // NewChecker creates a new Checker and panics on failure.
-func NewChecker(log *logging.Logger, db store.Store, srvName string, srvConfig ServiceConfig) Checker {
-	switch srvConfig.Checker.Type {
+func NewChecker(log *logging.Logger, db store.Store, srvName string, c ServiceConfig, d *DefaultConfig) Checker {
+	switch c.Checker.Type {
 	case GithubReleaseCheckerType:
-		return NewGithubReleaseChecker(log, db, srvName, srvConfig)
+		return NewGithubReleaseChecker(log, db, srvName, c)
 	case ScriptCheckerType:
-		return NewScriptChecker(log, srvName, srvConfig)
+		return NewScriptChecker(log, srvName, c, d)
 	default:
 		log.Fatalf("invalid checker type '%s' at 'services[%s].checker.type' when expecting: %v",
-			srvConfig.Checker.Type, srvName, checkerTypes)
+			c.Checker.Type, srvName, checkerTypes)
 		return nil
 	}
 }
@@ -62,14 +64,16 @@ func NewChecker(log *logging.Logger, db store.Store, srvName string, srvConfig S
 type ScriptChecker struct {
 	srvName string
 	c       ServiceConfig
+	d       *DefaultConfig
 	log     *logging.Logger
 }
 
 // NewScriptChecker uses a given script as a checker.
-func NewScriptChecker(log *logging.Logger, srvName string, c ServiceConfig) *ScriptChecker {
+func NewScriptChecker(log *logging.Logger, srvName string, c ServiceConfig, d *DefaultConfig) *ScriptChecker {
 	return &ScriptChecker{
 		srvName: srvName,
 		c:       c,
+		d:       d,
 		log:     log,
 	}
 }
@@ -78,8 +82,8 @@ func NewScriptChecker(log *logging.Logger, srvName string, c ServiceConfig) *Scr
 func (sc *ScriptChecker) Check(ctx context.Context) (*Release, error) {
 	check := sc.c.Checker
 	cmd := exec.Command(check.Interpreter, append([]string{check.Script}, check.Args...)...) //nolint:gosec
-	cmd.Env = sc.c.checkerEnvs()
-	hasUpdate, err := executeScript(ctx, sc.log, cmd)
+	cmd.Env = CheckerEnvs(sc.d, &sc.c)
+	hasUpdate, err := ExecuteScript(ctx, sc.log, cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +151,9 @@ func (gc *GithubReleaseChecker) fetchFromGit(ctx context.Context) (*GitReleaseBo
 	url := "https://" + path.Join("api.github.com/repos/", repo, "/releases/latest")
 	gc.log.Infoln("Request URL:", url)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if ok := addBasicAuth(req); ok {
+		gc.log.Infof("Added basic auth headers.")
+	}
 	if err != nil {
 		gc.log.WithError(err).Fatalln("failed to formulate 'fetchFromGit' request")
 		return nil, err
@@ -163,5 +170,18 @@ func (gc *GithubReleaseChecker) fetchFromGit(ctx context.Context) (*GitReleaseBo
 		gc.log.WithError(err).Fatalln("unrecognised json body")
 		return nil, err
 	}
+
+	jStr, _ := json.MarshalIndent(body, "", "    ") //nolint:errcheck
+	gc.log.Infoln(fmt.Sprintf("Response (%s):", resp.Status), string(jStr))
 	return &body, nil
+}
+
+func addBasicAuth(req *http.Request) bool {
+	usr, usrOK := os.LookupEnv(EnvGithubUsername)
+	pac, pacOK := os.LookupEnv(EnvGithubAccessToken)
+	if usrOK && pacOK {
+		req.SetBasicAuth(usr, pac)
+		return true
+	}
+	return false
 }

@@ -2,47 +2,41 @@ package update
 
 import (
 	"context"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/skycoin/skycoin/src/util/logging"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-const testScript = `
-#!/bin/bash
+const testUpdateScript = `#!/bin/bash
 
 echo "repo: ${SKYUPD_REPO}"
+echo "branch: ${SKYUPD_MAIN_BRANCH}"
+echo "process: ${SKYUPD_MAIN_PROCESS}"
 echo "version: ${SKYUPD_TO_VERSION}"
-shift 2
+shift 4
 
-echo "args: $@"
+echo "args: ${@}"
 `
 
-func TestCustomUpdater_Update(t *testing.T) {
-	f, err := ioutil.TempFile(os.TempDir(), "")
-	require.NoError(t, err)
-	defer os.Remove(f.Name())
+func TestScriptUpdater_Update(t *testing.T) {
+	fName, rm := prepareScript(t, testUpdateScript)
+	defer rm()
 
-	_, err = f.WriteString(testScript)
-	require.NoError(t, err)
+	c := ServiceConfig{
+		Repo:        "domain.com/org/repo",
+		MainBranch:  "branch",
+		MainProcess: "run",
+		Updater: UpdaterConfig{
+			Type:        ScriptUpdaterType,
+			Interpreter: "/bin/bash",
+			Script:      fName,
+			Args:        []string{"arg1"},
+		},
+	}
+	updater := NewUpdater(logging.MustGetLogger("my_service"), "my_service", c, new(DefaultConfig))
 
-	t.Run("ScriptUpdater", func(t *testing.T) {
-		c := ServiceConfig{
-			Repo: "domain.com/org/repo",
-			Updater: UpdaterConfig{
-				Type:        ScriptUpdaterType,
-				Interpreter: "/bin/bash",
-				Script:      f.Name(),
-				Args:        []string{"arg1"},
-			},
-		}
-		updater := NewUpdater(logging.MustGetLogger("my_service"), "my_service", c)
-
-		ok, err := updater.Update(context.TODO(), "v1.0")
-		assert.NoError(t, err)
-		assert.True(t, ok)
-	})
+	ok, err := updater.Update(context.TODO(), "v1.0")
+	assert.NoError(t, err)
+	assert.True(t, ok)
 }

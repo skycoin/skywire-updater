@@ -4,37 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 
 	"gopkg.in/yaml.v2"
 )
 
-const (
-
-	// EnvRepo can be used by a script to determine the repository URL of the
-	// service.
-	EnvRepo = "SKYUPD_REPO"
-
-	// EnvMainBranch can be used by a script to determine the main branch fo the
-	// service.
-	EnvMainBranch = "SKYUPD_MAIN_BRANCH"
-
-	// EnvMainProcess can be used by a script to determine the main process name
-	// for the service.
-	EnvMainProcess = "SKYUPD_MAIN_PROCESS"
-
-	// EnvToVersion can be used by an updater script to determine the version
-	// to update the service to.
-	EnvToVersion = "SKYUPD_TO_VERSION"
-)
-
-func cmdEnv(key, value string) string {
-	return fmt.Sprintf("%s=%s", key, value)
-}
-
-// Config represents an updater service configuration
-type Config struct {
-	Services map[string]*ServiceConfig `yaml:"services"`
+// DefaultConfig is the configuration that is shared across all services (as default).
+type DefaultConfig struct {
+	MainBranch  string   `yaml:"main-branch"`
+	Interpreter string   `yaml:"interpreter"`
+	Envs        []string `yaml:"envs"`
 }
 
 // ServiceConfig represents one of the services to be updated
@@ -44,52 +22,6 @@ type ServiceConfig struct {
 	MainProcess string        `yaml:"main-process"`
 	Checker     CheckerConfig `yaml:"checker"`
 	Updater     UpdaterConfig `yaml:"updater"`
-}
-
-func (sc *ServiceConfig) fillDefaults() {
-	if sc.Repo != "" {
-		if sc.MainBranch == "" {
-			sc.MainBranch = "master"
-		}
-		if sc.Checker.Type == "" {
-			sc.Checker.Type = ScriptCheckerType
-		}
-		if sc.Checker.Type == ScriptCheckerType && sc.Checker.Interpreter == "" {
-			sc.Checker.Interpreter = "/bin/bash"
-		}
-		if sc.Updater.Type == "" {
-			sc.Updater.Type = ScriptUpdaterType
-		}
-		if sc.Updater.Type == ScriptUpdaterType && sc.Updater.Interpreter == "" {
-			sc.Updater.Interpreter = "/bin/bash"
-		}
-	}
-}
-
-func (sc *ServiceConfig) validate() error {
-	if sc.Checker.Type == ScriptCheckerType && sc.Checker.Script == "" {
-		return errors.New("checker.script needs to be defined")
-	}
-	if sc.Updater.Type == ScriptUpdaterType && sc.Updater.Script == "" {
-		return errors.New("checker.script needs to be defined")
-	}
-	return nil
-}
-
-func (sc ServiceConfig) serviceEnvs() []string {
-	return append(os.Environ(), []string{
-		cmdEnv(EnvRepo, sc.Repo),
-		cmdEnv(EnvMainBranch, sc.MainBranch),
-		cmdEnv(EnvMainProcess, sc.MainProcess),
-	}...)
-}
-
-func (sc ServiceConfig) checkerEnvs() []string {
-	return append(sc.serviceEnvs(), sc.Checker.Envs...)
-}
-
-func (sc ServiceConfig) updaterEnvs() []string {
-	return append(sc.serviceEnvs(), sc.Updater.Envs...)
 }
 
 // CheckerConfig is the configuration for a service's checker.
@@ -114,6 +46,12 @@ type UpdaterConfig struct {
 	Envs        []string `yaml:"envs"`
 }
 
+// Config represents an updater service configuration
+type Config struct {
+	Default  DefaultConfig             `yaml:"default"`
+	Services map[string]*ServiceConfig `yaml:"services"`
+}
+
 // NewConfig loads a configuration from the given yaml config filepath
 func NewConfig(path string) (*Config, error) {
 	f, err := ioutil.ReadFile(path)
@@ -128,11 +66,53 @@ func NewConfig(path string) (*Config, error) {
 	}
 
 	for name, srv := range conf.Services {
-		srv.fillDefaults()
+		srv.fillDefaults(&conf.Default)
 		if err := srv.validate(); err != nil {
 			return nil, fmt.Errorf("invalid service %s: %s", name, err.Error())
 		}
 	}
 
 	return conf, nil
+}
+
+func (sc *ServiceConfig) fillDefaults(d *DefaultConfig) {
+	if sc.Repo != "" {
+		if sc.MainBranch == "" {
+			if d.MainBranch != "" {
+				sc.MainBranch = d.MainBranch
+			} else {
+				sc.MainBranch = "master"
+			}
+		}
+		if sc.Checker.Type == "" {
+			sc.Checker.Type = ScriptCheckerType
+		}
+		if sc.Checker.Type == ScriptCheckerType && sc.Checker.Interpreter == "" {
+			if d.Interpreter != "" {
+				sc.Checker.Interpreter = d.Interpreter
+			} else {
+				sc.Checker.Interpreter = "/bin/bash"
+			}
+		}
+		if sc.Updater.Type == "" {
+			sc.Updater.Type = ScriptUpdaterType
+		}
+		if sc.Updater.Type == ScriptUpdaterType && sc.Updater.Interpreter == "" {
+			if d.Interpreter != "" {
+				sc.Updater.Interpreter = d.Interpreter
+			} else {
+				sc.Updater.Interpreter = "/bin/bash"
+			}
+		}
+	}
+}
+
+func (sc *ServiceConfig) validate() error {
+	if sc.Checker.Type == ScriptCheckerType && sc.Checker.Script == "" {
+		return errors.New("checker.script needs to be defined")
+	}
+	if sc.Updater.Type == ScriptUpdaterType && sc.Updater.Script == "" {
+		return errors.New("checker.script needs to be defined")
+	}
+	return nil
 }

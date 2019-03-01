@@ -11,8 +11,8 @@ import (
 	"github.com/skycoin/skycoin/src/util/logging"
 )
 
-// executes the provided script and logs stdout.
-func executeScript(ctx context.Context, log *logging.Logger, cmd *exec.Cmd) (bool, error) {
+// ExecuteScript executes the provided script and logs stdout.
+func ExecuteScript(ctx context.Context, log *logging.Logger, cmd *exec.Cmd) (bool, error) {
 	script := filepath.Base(cmd.Args[1])
 	args := cmd.Args
 
@@ -75,9 +75,10 @@ func executeScript(ctx context.Context, log *logging.Logger, cmd *exec.Cmd) (boo
 	wg.Wait()
 
 	if err = cmd.Wait(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); !ok && exitCode(exitErr) != 1 {
+		if exitErr, ok := err.(*exec.ExitError); !ok || exitCode(exitErr) != 1 {
 			return false, err
 		}
+
 		return false, nil
 	}
 	return true, nil

@@ -25,13 +25,13 @@ type Updater interface {
 }
 
 // NewUpdater creates a new updater.
-func NewUpdater(log *logging.Logger, srvName string, srvConfig ServiceConfig) Updater {
-	switch srvConfig.Updater.Type {
+func NewUpdater(log *logging.Logger, srvName string, c ServiceConfig, d *DefaultConfig) Updater {
+	switch c.Updater.Type {
 	case ScriptUpdaterType:
-		return NewScriptUpdater(log, srvName, srvConfig)
+		return NewScriptUpdater(log, srvName, c, d)
 	default:
 		log.Fatalf("invalid updater type '%s' at 'services[%s].updater.type' when expecting: %v",
-			srvConfig.Updater.Type, srvName, updaterTypes)
+			c.Updater.Type, srvName, updaterTypes)
 		return nil
 	}
 }
@@ -40,14 +40,16 @@ func NewUpdater(log *logging.Logger, srvName string, srvConfig ServiceConfig) Up
 type ScriptUpdater struct {
 	srvName string
 	c       ServiceConfig
+	d       *DefaultConfig
 	log     *logging.Logger
 }
 
 // NewScriptUpdater creates a new ScriptUpdater.
-func NewScriptUpdater(log *logging.Logger, srvName string, c ServiceConfig) *ScriptUpdater {
+func NewScriptUpdater(log *logging.Logger, srvName string, c ServiceConfig, d *DefaultConfig) *ScriptUpdater {
 	return &ScriptUpdater{
 		srvName: srvName,
 		c:       c,
+		d:       d,
 		log:     log,
 	}
 }
@@ -56,7 +58,7 @@ func NewScriptUpdater(log *logging.Logger, srvName string, c ServiceConfig) *Scr
 func (cu *ScriptUpdater) Update(ctx context.Context, version string) (bool, error) {
 	update := cu.c.Updater
 	cmd := exec.Command(update.Interpreter, append([]string{update.Script}, update.Args...)...) //nolint:gosec
-	cmd.Env = append(cu.c.updaterEnvs(), cmdEnv(EnvToVersion, version))
+	cmd.Env = UpdaterEnvs(cu.d, &cu.c, version)
 
-	return executeScript(ctx, cu.log, cmd)
+	return ExecuteScript(ctx, cu.log, cmd)
 }

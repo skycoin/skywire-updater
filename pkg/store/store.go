@@ -41,7 +41,7 @@ type JSON struct {
 func NewJSON(filePath string) (*JSON, error) {
 	db := &JSON{
 		data: make(map[string]Update),
-		log:  logging.MustGetLogger("store.JSON"),
+		log:  logging.MustGetLogger("store(JSON)"),
 	}
 
 	if err := os.MkdirAll(filepath.Dir(filePath), 0744); err != nil {

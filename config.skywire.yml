@@ -1,48 +1,35 @@
+default:
+  main-branch: "master"
+  interpreter: "/bin/bash"
+  envs:
+    - "BIN_DIR=./bin" # TODO: properly define.
+    - "APP_DIR=./bin" # TODO: properly define.
+
 services:
   skywire:
     repo: "github.com/watercompany/skywire"
-    main-branch: "master"
     main-process: "skywire-node"
     checker:
       type: "script"
-      interpreter: "/bin/bash"
       script: "check/bin_diff"
-      envs:
-        - "BIN_DIR=/Users/evanlinjin/go/bin" # TODO: properly define.
     updater:
       type: "script"
-      interpreter: "/bin/bash"
       script: "update/skywire"
-      envs:
-        - "BIN_DIR=/Users/evanlinjin/go/bin" # TODO: properly define.
-        - "APP_DIR=/Users/evanlinjin/go/bin" # TODO: properly define.
 
   skywire-updater:
     repo: "github.com/watercompany/skywire-updater"
-    main-branch: "master"
     main-process: "skywire-updater"
     checker:
-      type: "script"
-      interpreter: "/bin/bash"
-      script: "check/bin_diff"
-      envs:
-        - "BIN_DIR=/Users/evanlinjin/go/bin" # TODO: properly define.
+      type: "github_release"
     updater:
       type: "script"
-      interpreter: "/bin/bash"
       script: "update/to_release"
-      envs:
-        - "BIN_DIR=/Users/evanlinjin/go/bin" # TODO: properly define.
 
   skycoin:
     repo: "github.com/skycoin/skycoin"
-    main-branch: "master"
     main-process: "skycoin"
     checker:
       type: "github_release"
     updater:
       type: "script"
-      interpreter: "/bin/bash"
       script: "update/to_release"
-      envs:
-        - "BIN_DIR=/Users/evanlinjin/go/bin" # TODO: properly define.

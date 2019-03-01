@@ -27,6 +27,7 @@ type srvEntry struct {
 
 // Manager manages checkers and updaters for services.
 type Manager struct {
+	global   DefaultConfig
 	services map[string]srvEntry
 	mu       sync.RWMutex
 	db       store.Store
@@ -36,6 +37,7 @@ type Manager struct {
 // NewManager creates a new manager.
 func NewManager(db store.Store, scriptsDir string, conf *Config) *Manager {
 	d := &Manager{
+		global:   conf.Default,
 		services: make(map[string]srvEntry),
 		db:       db,
 		log:      logging.MustGetLogger("manager"),
@@ -46,8 +48,8 @@ func NewManager(db store.Store, scriptsDir string, conf *Config) *Manager {
 		srvConf.Updater.Script = path.Join(scriptsDir, srvConf.Updater.Script)
 		d.services[srvName] = srvEntry{
 			ServiceConfig: srvConf,
-			Checker:       NewChecker(logging.MustGetLogger("checker("+srvName+")"), db, srvName, srvConf),
-			Updater:       NewUpdater(logging.MustGetLogger("updater("+srvName+")"), srvName, srvConf),
+			Checker:       NewChecker(logging.MustGetLogger("checker("+srvName+")"), db, srvName, srvConf, &d.global),
+			Updater:       NewUpdater(logging.MustGetLogger("updater("+srvName+")"), srvName, srvConf, &d.global),
 		}
 	}
 	return d
