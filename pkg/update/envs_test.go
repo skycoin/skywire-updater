@@ -12,7 +12,7 @@ import (
 
 func TestCheckerEnvs(t *testing.T) {
 	type Test struct {
-		Default DefaultConfig
+		Default DefaultsConfig
 		Service ServiceConfig
 		Script  string
 	}
@@ -27,7 +27,7 @@ func TestCheckerEnvs(t *testing.T) {
 	}
 	t.Run(fmt.Sprintf("default(%s)", EnvMainBranch), func(t *testing.T) {
 		do(t, Test{
-			Default: DefaultConfig{
+			Default: DefaultsConfig{
 				Envs: []string{MakeEnv(EnvMainBranch, "master")},
 			},
 			Service: ServiceConfig{},
@@ -36,7 +36,7 @@ func TestCheckerEnvs(t *testing.T) {
 	})
 	t.Run(fmt.Sprintf("service_override(%s)", EnvMainBranch), func(t *testing.T) {
 		do(t, Test{
-			Default: DefaultConfig{
+			Default: DefaultsConfig{
 				Envs: []string{MakeEnv(EnvMainBranch, "master")},
 			},
 			Service: ServiceConfig{
@@ -47,7 +47,7 @@ func TestCheckerEnvs(t *testing.T) {
 	})
 	t.Run(fmt.Sprintf("checker_override_1(%s)", EnvMainBranch), func(t *testing.T) {
 		do(t, Test{
-			Default: DefaultConfig{
+			Default: DefaultsConfig{
 				Envs: []string{MakeEnv(EnvMainBranch, "master")},
 			},
 			Service: ServiceConfig{
@@ -61,7 +61,7 @@ func TestCheckerEnvs(t *testing.T) {
 	})
 	t.Run(fmt.Sprintf("checker_override_2(%s)", EnvMainBranch), func(t *testing.T) {
 		do(t, Test{
-			Default: DefaultConfig{
+			Default: DefaultsConfig{
 				Envs: []string{MakeEnv(EnvMainBranch, "master")},
 			},
 			Service: ServiceConfig{
@@ -74,7 +74,7 @@ func TestCheckerEnvs(t *testing.T) {
 	})
 	t.Run("default(NEW_ENV)", func(t *testing.T) {
 		do(t, Test{
-			Default: DefaultConfig{
+			Default: DefaultsConfig{
 				Envs: []string{"NEW_ENV=env_value"},
 			},
 			Service: ServiceConfig{
@@ -87,7 +87,7 @@ func TestCheckerEnvs(t *testing.T) {
 	})
 	t.Run("checker_override(NEW_ENV)", func(t *testing.T) {
 		do(t, Test{
-			Default: DefaultConfig{
+			Default: DefaultsConfig{
 				Envs: []string{"NEW_ENV=env_value"},
 			},
 			Service: ServiceConfig{
@@ -102,7 +102,7 @@ func TestCheckerEnvs(t *testing.T) {
 
 func TestUpdaterEnvs(t *testing.T) {
 	type Test struct {
-		Default   DefaultConfig
+		Default   DefaultsConfig
 		Service   ServiceConfig
 		ToVersion string
 		Script    string
@@ -118,7 +118,7 @@ func TestUpdaterEnvs(t *testing.T) {
 	}
 	t.Run(fmt.Sprintf("default(%s)", EnvToVersion), func(t *testing.T) {
 		do(t, Test{
-			Default: DefaultConfig{
+			Default: DefaultsConfig{
 				Envs: []string{MakeEnv(EnvToVersion, "v1.0")},
 			},
 			Script: fmt.Sprintf(`if [ "${%s}" != "v1.0" ]; then exit 1; fi`, EnvToVersion),
@@ -136,7 +136,7 @@ func TestUpdaterEnvs(t *testing.T) {
 	})
 	t.Run(fmt.Sprintf("updater_override(%s)", EnvToVersion), func(t *testing.T) {
 		do(t, Test{
-			Default: DefaultConfig{
+			Default: DefaultsConfig{
 				Envs: []string{MakeEnv(EnvToVersion, "v1.0")},
 			},
 			Service: ServiceConfig{
@@ -149,7 +149,7 @@ func TestUpdaterEnvs(t *testing.T) {
 	})
 	t.Run(fmt.Sprintf("updater_update_override_1(%s)", EnvToVersion), func(t *testing.T) {
 		do(t, Test{
-			Default: DefaultConfig{
+			Default: DefaultsConfig{
 				Envs: []string{MakeEnv(EnvToVersion, "v1.0")},
 			},
 			Service: ServiceConfig{
@@ -163,7 +163,7 @@ func TestUpdaterEnvs(t *testing.T) {
 	})
 	t.Run(fmt.Sprintf("updater_update_override_2(%s)", EnvToVersion), func(t *testing.T) {
 		do(t, Test{
-			Default: DefaultConfig{
+			Default: DefaultsConfig{
 				Envs: []string{MakeEnv(EnvToVersion, "v1.0")},
 			},
 			ToVersion: "v3.0",

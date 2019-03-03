@@ -1,8 +1,20 @@
-default:
+# The default configuration.
+
+paths:
+  db-file: "db.json"
+  scripts-path: "scripts"
+
+interfaces:
+  addr: ":7280"
+  enable-rest: true
+  enable-rpc: true
+
+defaults:
   main-branch: "master"
   interpreter: "/bin/bash"
-  envs: - "BIN_DIR=./bin" # TODO: properly define.
-        - "APP_DIR=./bin" # TODO: properly define.
+  envs:
+    - "BIN_DIR=./bin" # TODO: properly define.
+    - "APP_DIR=./bin" # TODO: properly define.
 
 services:
   skywire:
@@ -10,7 +22,7 @@ services:
     main-process: "skywire-node"
     checker:
       type: "script"
-      script: "check/bin_diff"
+      script: "check/bin-diff"
     updater:
       type: "script"
       script: "update/skywire"
@@ -19,16 +31,16 @@ services:
     repo: "github.com/watercompany/skywire-updater"
     main-process: "skywire-updater"
     checker:
-      type: "github_release"
+      type: "github-release"
     updater:
       type: "script"
-      script: "update/to_release"
+      script: "update/to-release"
 
   skycoin:
     repo: "github.com/skycoin/skycoin"
     main-process: "skycoin"
     checker:
-      type: "github_release"
+      type: "github-release"
     updater:
       type: "script"
-      script: "update/to_release"
+      script: "update/to-release"

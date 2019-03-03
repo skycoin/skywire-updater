@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/skycoin/skycoin/src/util/logging"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,7 +33,7 @@ func TestScriptUpdater_Update(t *testing.T) {
 			Args:        []string{"arg1"},
 		},
 	}
-	updater := NewUpdater(logging.MustGetLogger("my_service"), "my_service", c, new(DefaultConfig))
+	updater := NewUpdater("my-service", c, new(DefaultsConfig))
 
 	ok, err := updater.Update(context.TODO(), "v1.0")
 	assert.NoError(t, err)

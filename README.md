@@ -5,18 +5,15 @@
 `skywire-updater` is responsible for updating services associated with Skywire. Actions include checking for updates, and actually updating the service.
 
 ```
+$ skywire-updater -h
+
 Updates skywire services
 
 Usage:
-  skywire-updater [flags]
+  skywire-updater [assets/config.default.yml] [flags]
 
 Flags:
-      --config-file string   path to updater's configuration file (default "/Users/anonymous/go/src/github.com/watercompany/skywire-updater/config.skywire.yml")
-      --db-file string       path to db file (creates if not exist) (default "/Users/anonymous/.skywire/updater/db.json")
-  -h, --help                 help for skywire-updater
-      --http-addr string     address in which to serve http api (disabled if not set) (default ":6781")
-      --rpc-addr string      address in which to serve rpc api (disabled if not set) (default ":6782")
-      --scripts-dir string   path to dir containing scripts (default "/Users/anonymous/go/src/github.com/watercompany/skywire-updater/scripts")
+  -h, --help   help for skywire-updater
 ```
 
 ## Installation
@@ -32,20 +29,34 @@ $ go get -d -u github.com/watercompany/skywire-updater
 # Install.
 $ cd ${GOPATH}/src/github.com/watercompany/skywire-updater
 $ go install ./...
+
+# Run.
+$ skywire-updater
 ```
 
 ## Configuration
 
 The `config.skywire.yml` file is the default configuration for skywire.
 
-The configuration file contains two main sections:
-- `default:` - Specifies default values for other fields.
+The configuration file contains the following sections:
+- `paths:` - Specifies paths for the `skywire-updater`.
+- `interfaces:` - Specifies network interface settings.
+- `defaults:` - Specifies default values for `services`.
 - `services:` - Specifies services that the `skywire-updater` is responsible for.
 
 Here is an example configuration with comments:
 
 ```yaml
-default: # Configures default field values.
+paths: # Configures paths.
+  db-file: "/usr/local/skywire-updater/db.json"      # Database file location ("db.json" if unspecified).
+  scripts-path: "/usr/local/skywire-updater/scripts" # Scripts folder location ("scripts" if unspecified).
+
+interfaces: # Configures network interfaces.
+  addr: ":8080" # Address to bind and listen from (":7280" if unspecified).
+  enable-rest: true # Whether to enable RESTful interface served from {addr}/api/ (true if unspecified).
+  enable-rpc: true  # Whether to enable RPC interface served from {addr}/rpc/ (true if unspecified).
+
+defaults: # Configures default field values.
   main-branch: "master"  # Default 'main-branch' field value ("master" if unspecified).
   interpreter: "/bin/sh" # Default 'interpreter' field value ("/bin/bash" if unspecified).
   envs:                  # Default 'envs' field values (none if unspecified).
@@ -76,25 +87,39 @@ services: # Configures services.
     # The config for 'another-service' goes here ...
 ```
 
-## RESTful API
+## RESTful Endpoints
 
-### List services
-```
-Method: GET
-URI: /services
+- **List services**
+    ```
+    GET /api/services
+    ```
+
+- **Check for updates for given service**
+    ```
+    GET /api/services/:service_name/check
+    ```
+
+- **Update given service**
+    ```
+    POST /api/services/:service_name/update/:version
+    ```
+
+## RPC Endpoints
+
+An RPC Client is provided in [/pkg/api/rpc.go](/pkg/api/rpc.go).
+
+```go
+package main
+
+import "github.com/watercompany/skywire-updater/pkg/api"
+
+func main() {
+	client, err := api.DialRPC(":7280")
+	// interact with client ...
+}
 ```
 
-### Check for updates for given service
-```
-Method: GET
-URI: /services/:service_name/check
-```
-
-### Update given service
-```
-Method: POST
-URI: /services/:service_name/update/:version
-```
+Note that the RPC and REST interfaces of the `skywire-updater` are served on the same port (but on different paths).
 
 ## Running in Docker 
 ***WARNING: untested - requires updating.***

@@ -21,7 +21,7 @@ type CheckerType string
 
 const (
 	// GithubReleaseCheckerType type.
-	GithubReleaseCheckerType = CheckerType("github_release")
+	GithubReleaseCheckerType = CheckerType("github-release")
 
 	// ScriptCheckerType type.
 	ScriptCheckerType = CheckerType("script")
@@ -47,12 +47,12 @@ type Checker interface {
 }
 
 // NewChecker creates a new Checker and panics on failure.
-func NewChecker(log *logging.Logger, db store.Store, srvName string, c ServiceConfig, d *DefaultConfig) Checker {
+func NewChecker(db store.Store, srvName string, c ServiceConfig, d *DefaultsConfig) Checker {
 	switch c.Checker.Type {
 	case GithubReleaseCheckerType:
-		return NewGithubReleaseChecker(log, db, srvName, c)
+		return NewGithubReleaseChecker(db, srvName, c)
 	case ScriptCheckerType:
-		return NewScriptChecker(log, srvName, c, d)
+		return NewScriptChecker(srvName, c, d)
 	default:
 		log.Fatalf("invalid checker type '%s' at 'services[%s].checker.type' when expecting: %v",
 			c.Checker.Type, srvName, checkerTypes)
@@ -62,19 +62,17 @@ func NewChecker(log *logging.Logger, db store.Store, srvName string, c ServiceCo
 
 // ScriptChecker checks via scripts.
 type ScriptChecker struct {
-	srvName string
-	c       ServiceConfig
-	d       *DefaultConfig
-	log     *logging.Logger
+	c   ServiceConfig
+	d   *DefaultsConfig
+	log *logging.Logger
 }
 
 // NewScriptChecker uses a given script as a checker.
-func NewScriptChecker(log *logging.Logger, srvName string, c ServiceConfig, d *DefaultConfig) *ScriptChecker {
+func NewScriptChecker(srvName string, c ServiceConfig, d *DefaultsConfig) *ScriptChecker {
 	return &ScriptChecker{
-		srvName: srvName,
-		c:       c,
-		d:       d,
-		log:     log,
+		c:   c,
+		d:   d,
+		log: logging.MustGetLogger("script-checker." + srvName),
 	}
 }
 
@@ -97,18 +95,18 @@ func (sc *ScriptChecker) Check(ctx context.Context) (*Release, error) {
 // GithubReleaseChecker checks for available updates via the github API.
 type GithubReleaseChecker struct {
 	srvName string
-	sc      ServiceConfig
+	c       ServiceConfig
 	db      store.Store
 	log     *logging.Logger
 }
 
 // NewGithubReleaseChecker creates a new GithubReleaseChecker.
-func NewGithubReleaseChecker(log *logging.Logger, db store.Store, srvName string, sc ServiceConfig) *GithubReleaseChecker {
+func NewGithubReleaseChecker(db store.Store, srvName string, c ServiceConfig) *GithubReleaseChecker {
 	return &GithubReleaseChecker{
 		srvName: srvName,
-		sc:      sc,
+		c:       c,
 		db:      db,
-		log:     log,
+		log:     logging.MustGetLogger("release-checker." + srvName),
 	}
 }
 
@@ -147,7 +145,7 @@ func (grb GitReleaseBody) ParsePubAt() (time.Time, error) {
 }
 
 func (gc *GithubReleaseChecker) fetchFromGit(ctx context.Context) (*GitReleaseBody, error) {
-	repo := strings.TrimPrefix(gc.sc.Repo, "github.com")
+	repo := strings.TrimPrefix(gc.c.Repo, "github.com")
 	url := "https://" + path.Join("api.github.com/repos/", repo, "/releases/latest")
 	gc.log.Infoln("Request URL:", url)
 	req, err := http.NewRequest(http.MethodGet, url, nil)

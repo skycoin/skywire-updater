@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/skycoin/skycoin/src/util/logging"
 	"github.com/stretchr/testify/require"
 
 	"github.com/watercompany/skywire-updater/pkg/store"
@@ -49,7 +48,7 @@ func TestScriptChecker_Check(t *testing.T) {
 			Args:        []string{"arg1"},
 		},
 	}
-	checker := NewChecker(logging.MustGetLogger("my_service"), j, "my_service", c, new(DefaultConfig))
+	checker := NewChecker(j, "my-service", c, new(DefaultsConfig))
 
 	r, err := checker.Check(context.TODO())
 	require.NoError(t, err)

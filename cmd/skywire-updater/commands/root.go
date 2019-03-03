@@ -14,84 +14,53 @@ import (
 	"github.com/watercompany/skywire-updater/pkg/update"
 )
 
-var (
-	configPath string
-	dbPath     string
-	scriptsDir string
-	httpAddr   string
-	rpcAddr    string
-
-	log = logging.MustGetLogger("skywire-updater")
-)
-
-func init() {
-	// defaults.
-	configPath = "./config.skywire.yml"
-	dbPath = "./db.json"
-	scriptsDir = "./scripts"
-	httpAddr = ":6781"
-	rpcAddr = ":6782"
-
-	// flags.
-	rootCmd.PersistentFlags().StringVar(&configPath, "config-file", configPath, "path to updater's configuration file")
-	rootCmd.Flags().StringVar(&dbPath, "db-file", dbPath, "path to db file (creates if not exist)")
-	rootCmd.Flags().StringVar(&scriptsDir, "scripts-dir", scriptsDir, "path to dir containing scripts")
-	rootCmd.Flags().StringVar(&httpAddr, "http-addr", httpAddr, "address in which to serve http api (disabled if not set)")
-	rootCmd.Flags().StringVar(&rpcAddr, "rpc-addr", rpcAddr, "address in which to serve rpc api (disabled if not set)")
-}
+var log = logging.MustGetLogger("skywire-updater")
 
 var rootCmd = &cobra.Command{
-	Use:   "skywire-updater",
+	Use:   "skywire-updater [assets/config.default.yml]",
 	Short: "Updates skywire services",
-	Run: func(_ *cobra.Command, _ []string) {
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, os.Interrupt)
-		defer close(sigCh)
-
-		db, err := store.NewJSON(dbPath)
-		if err != nil {
-			log.WithError(err).Fatalln("failed to load db")
-			return
+	Run: func(_ *cobra.Command, args []string) {
+		configPath := "assets/config.default.yml"
+		if len(args) > 0 {
+			configPath = args[0]
 		}
 
-		conf, err := update.NewConfig(configPath)
+		log.Infof("config path: '%s'", configPath)
+		conf, err := update.ParseConfig(configPath)
 		if err != nil {
 			log.WithError(err).Fatalln("failed to load config")
 			return
 		}
 
-		srv := update.NewManager(db, scriptsDir, conf)
+		log.Infof("db path: '%s'", conf.Paths.DBFile)
+		db, err := store.NewJSON(conf.Paths.DBFile)
+		if err != nil {
+			log.WithError(err).Fatalln("failed to load db")
+			return
+		}
 
-		if httpAddr != "" {
-			l, err := net.Listen("tcp", httpAddr)
+		srv := update.NewManager(db, conf)
+
+		if conf.Interfaces.EnableREST || conf.Interfaces.EnableRPC {
+			l, err := net.Listen("tcp", conf.Interfaces.Addr)
 			if err != nil {
 				log.WithError(err).Fatalln("failed to listen http")
 				return
 			}
-			log.Infof("http listening on %s", l.Addr())
+			log.Infof("serving on address '%s'", l.Addr())
 			go func() {
-				if err := http.Serve(l, api.HandleHTTP(srv)); err != nil {
-					log.WithError(err).Fatalln("failed to serve http")
-					return
-				}
-			}()
-		}
-		if rpcAddr != "" {
-			l, err := net.Listen("tcp", rpcAddr)
-			if err != nil {
-				log.WithError(err).Fatalln("failed to listen rpc")
-				return
-			}
-			log.Infof("rpc listening on %s", l.Addr())
-			go func() {
-				if err := http.Serve(l, api.HandleRPC(srv)); err != nil {
+				if err := http.Serve(l, api.Handle(srv, conf.Interfaces.EnableREST, conf.Interfaces.EnableRPC)); err != nil {
 					log.WithError(err).Fatalln("failed to serve http")
 					return
 				}
 			}()
 		}
 
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, os.Interrupt)
+		defer close(sigCh)
 		log.Infof("exited with sig: %s", <-sigCh)
+
 		if err := srv.Close(); err != nil {
 			log.WithError(err).Error()
 		}

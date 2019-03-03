@@ -9,10 +9,7 @@ import (
 	"github.com/watercompany/skywire-updater/pkg/update"
 )
 
-const rpcPrefix = "updater"
-
-// HandleRPC makes a http.Handler from a Gateway implementation.
-func HandleRPC(g Gateway) http.Handler {
+func handleRPC(g Gateway) http.Handler {
 	rs := rpc.NewServer()
 	if err := rs.RegisterName(rpcPrefix, &RPC{g: g}); err != nil {
 		log.WithError(err).Fatalln("failed to register RPC")
@@ -73,6 +70,15 @@ func (r *RPC) Update(in *UpdateIn, ok *bool) (err error) {
 // RPCClient calls RPC.
 type RPCClient struct {
 	*rpc.Client
+}
+
+// DialRPC dials to a given skywire-updater RPC server of address.
+func DialRPC(addr string) (*RPCClient, error) {
+	rc, err := rpc.DialHTTPPath("tcp", addr, "/rpc")
+	if err != nil {
+		return nil, err
+	}
+	return &RPCClient{Client: rc}, nil
 }
 
 // Call calls with prefix.

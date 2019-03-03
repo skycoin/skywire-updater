@@ -1,28 +1,16 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi"
-	"github.com/skycoin/skycoin/src/util/logging"
 
 	"github.com/watercompany/skywire-updater/pkg/update"
 )
 
-var log = logging.MustGetLogger("api")
-
-// Gateway provides the API gateway.
-type Gateway interface {
-	Services() []string
-	Check(ctx context.Context, srvName string) (*update.Release, error)
-	Update(ctx context.Context, srvName, toVersion string) (bool, error)
-}
-
-// HandleHTTP makes a http.Handler from a Gateway implementation.
-func HandleHTTP(g Gateway) http.Handler {
+func handleREST(g Gateway) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/services", services(g))
 	r.Get("/services/{srv}/check", checkService(g))
@@ -32,7 +20,7 @@ func HandleHTTP(g Gateway) http.Handler {
 
 func services(g Gateway) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		WriteJSON(w, http.StatusOK, g.Services())
+		writeJSON(w, http.StatusOK, g.Services())
 	}
 }
 
@@ -44,13 +32,13 @@ func checkService(g Gateway) http.HandlerFunc {
 		release, err := g.Check(r.Context(), pSrv)
 		if err != nil {
 			if err == update.ErrServiceNotFound {
-				WriteJSON(w, http.StatusNotFound, err)
+				writeJSON(w, http.StatusNotFound, err)
 				return
 			}
-			WriteJSON(w, http.StatusInternalServerError, err)
+			writeJSON(w, http.StatusInternalServerError, err)
 			return
 		}
-		WriteJSON(w, http.StatusOK, release)
+		writeJSON(w, http.StatusOK, release)
 	}
 }
 
@@ -63,23 +51,23 @@ func updateService(g Gateway) http.HandlerFunc {
 		ok, err := g.Update(r.Context(), pSrv, pVer)
 		if err != nil {
 			if err == update.ErrServiceNotFound {
-				WriteJSON(w, http.StatusNotFound, err)
+				writeJSON(w, http.StatusNotFound, err)
 				return
 			}
-			WriteJSON(w, http.StatusInternalServerError, err)
+			writeJSON(w, http.StatusInternalServerError, err)
 			return
 		}
 		if !ok {
-			WriteJSON(w, http.StatusInternalServerError, errors.New("update failed"))
+			writeJSON(w, http.StatusInternalServerError, errors.New("update failed"))
 			return
 		}
-		WriteJSON(w, http.StatusOK, ok)
+		writeJSON(w, http.StatusOK, ok)
 	}
 }
 
-// WriteJSON writes a json object on a http.ResponseWriter with the given code,
-// panics on marshaling error
-func WriteJSON(w http.ResponseWriter, code int, v interface{}) {
+// writes a json object on a http.ResponseWriter with the given code,
+// panics on marshaling error.
+func writeJSON(w http.ResponseWriter, code int, v interface{}) {
 
 	// HTTPError is included in an HTTPResponse
 	type HTTPError struct {

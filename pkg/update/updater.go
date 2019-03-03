@@ -25,32 +25,30 @@ type Updater interface {
 }
 
 // NewUpdater creates a new updater.
-func NewUpdater(log *logging.Logger, srvName string, c ServiceConfig, d *DefaultConfig) Updater {
+func NewUpdater(srvName string, c ServiceConfig, d *DefaultsConfig) Updater {
 	switch c.Updater.Type {
 	case ScriptUpdaterType:
-		return NewScriptUpdater(log, srvName, c, d)
+		return NewScriptUpdater(srvName, c, d)
 	default:
 		log.Fatalf("invalid updater type '%s' at 'services[%s].updater.type' when expecting: %v",
-			c.Updater.Type, srvName, updaterTypes)
+			c.Updater.Type, updaterTypes)
 		return nil
 	}
 }
 
 // ScriptUpdater is an implementation of updater using scripts.
 type ScriptUpdater struct {
-	srvName string
-	c       ServiceConfig
-	d       *DefaultConfig
-	log     *logging.Logger
+	c   ServiceConfig
+	d   *DefaultsConfig
+	log *logging.Logger
 }
 
 // NewScriptUpdater creates a new ScriptUpdater.
-func NewScriptUpdater(log *logging.Logger, srvName string, c ServiceConfig, d *DefaultConfig) *ScriptUpdater {
+func NewScriptUpdater(srvName string, c ServiceConfig, d *DefaultsConfig) *ScriptUpdater {
 	return &ScriptUpdater{
-		srvName: srvName,
-		c:       c,
-		d:       d,
-		log:     log,
+		c:   c,
+		d:   d,
+		log: logging.MustGetLogger("script-updater." + srvName),
 	}
 }
 

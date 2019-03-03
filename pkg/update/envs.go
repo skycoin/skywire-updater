@@ -38,20 +38,20 @@ func MakeEnv(key, value string) string {
 
 // CheckerEnvs outputs envs for a given checker of service.
 // It builds in this order:
-// 1. Envs from Default.
+// 1. Envs from Defaults.
 // 2. Envs from Service.
 // 3. Envs from Service.Checker.
-func CheckerEnvs(g *DefaultConfig, s *ServiceConfig) []string {
+func CheckerEnvs(g *DefaultsConfig, s *ServiceConfig) []string {
 	return append(srvEnvs(g, s), s.Checker.Envs...)
 }
 
 // UpdaterEnvs outputs envs for a given updater of service.
 // It builds in this order:
-// 1. Envs from Default.
+// 1. Envs from Defaults.
 // 2. Envs from Service.
 // 3. Envs from Service.Updater.
 // 4. Add SKYUPD_TO_VERSION env.
-func UpdaterEnvs(g *DefaultConfig, s *ServiceConfig, toVersion string) []string {
+func UpdaterEnvs(g *DefaultsConfig, s *ServiceConfig, toVersion string) []string {
 	envs := append(srvEnvs(g, s), s.Updater.Envs...)
 	if toVersion != "" {
 		envs = append(envs, MakeEnv(EnvToVersion, toVersion))
@@ -59,7 +59,7 @@ func UpdaterEnvs(g *DefaultConfig, s *ServiceConfig, toVersion string) []string 
 	return envs
 }
 
-func srvEnvs(g *DefaultConfig, s *ServiceConfig) []string {
+func srvEnvs(g *DefaultsConfig, s *ServiceConfig) []string {
 	envs := append(os.Environ(), g.Envs...)
 	if s.Repo != "" {
 		envs = append(envs, MakeEnv(EnvRepo, s.Repo))
