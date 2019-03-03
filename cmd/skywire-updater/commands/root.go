@@ -17,10 +17,10 @@ import (
 var log = logging.MustGetLogger("skywire-updater")
 
 var rootCmd = &cobra.Command{
-	Use:   "skywire-updater [assets/config.default.yml]",
+	Use:   "skywire-updater [/usr/local/skywire-updater/config.yml]",
 	Short: "Updates skywire services",
 	Run: func(_ *cobra.Command, args []string) {
-		configPath := "assets/config.default.yml"
+		configPath := "/usr/local/skywire-updater/config.yml"
 		if len(args) > 0 {
 			configPath = args[0]
 		}

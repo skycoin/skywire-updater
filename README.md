@@ -23,12 +23,13 @@ Prerequisites:
 - Enable [go modules](https://github.com/golang/go/wiki/Modules).
 
 ```bash
-# Download.
-$ go get -d -u github.com/watercompany/skywire-updater
+# Clone.
+$ cd /usr/local
+$ git clone https://github.com/watercompany/skywire-updater
+$ cd skywire-updater
 
 # Install.
-$ cd ${GOPATH}/src/github.com/watercompany/skywire-updater
-$ go install ./...
+$ GOPATH111MODULE=on go install ./...
 
 # Run.
 $ skywire-updater
@@ -61,7 +62,7 @@ defaults: # Configures default field values.
   interpreter: "/bin/sh" # Default 'interpreter' field value ("/bin/bash" if unspecified).
   envs:                  # Default 'envs' field values (none if unspecified).
     - "BIN_DIR=/usr/local/skywire/bin"
-    - "APP_DIR=/usr/local/skywire/bin/apps"
+    - "APP_DIR=/usr/local/skywire/apps/bin"
 
 services: # Configures services.
   skywire: # Service name/ID. This service is named "skywire".
@@ -70,18 +71,18 @@ services: # Configures services.
     main-process: "skywire-node"               # Main executable's name. Will be saved in SKYUPD_MAIN_PROCESS env for scripts.
     checker:                                            # Defines the service's checker (used to check for available updates).
       type: "script"                                    # Type of checker. Valid: "script"(default), "github_release".
-      script: "check/bin_diff"                          # Required if checker type is "script": Specifies script to run (within '--scripts-dir' arg).
+      script: "check/bin-diff"                          # Required if checker type is "script": Specifies script to run (within '--scripts-dir' arg).
       interpreter: "/bin/bash"                          # Required if checker type is "script": Specifies script interpreter. Default will be used if not set.
       args: - "-v"                                      # Optional: Additional arguments for checker scripts.
       envs:                                             # Optional: Set environment variables that can be used by checker.
-        - "APP_DIR=/usr/local/skywire/bin/default-apps" # This overrides default's APP_DIR definition.
+        - "APP_DIR=/usr/local/skywire/default-apps/bin" # This overrides default's APP_DIR definition.
     updater:                                            # Defines the service's updater (actually updates the service's binaries and relevant files).
       type: "script"                                    # Type of updater. Only "script"(default) is supported.
       script: "update/skywire"                          # Required if updater type is "script": Specifies script to run (within '--scripts-dir' arg).
       interpreter: "/bin/bash"                          # Required if updater type is "script": Specifies script interpreter. Default will be used if not set.
       args: - "-v"                                      # Optional: Additional arguments for updater scripts.
       envs:                                             # Optional: Set environment variables that can be used by updater.
-        - "APP_DIR=/usr/local/skywire/bin/default-apps" # This overrides default's APP_DIR definition.
+        - "APP_DIR=/usr/local/skywire/default-apps/bin" # This overrides default's APP_DIR definition.
 
   another-service: # Another service. This service is named "another-service".
     # The config for 'another-service' goes here ...
