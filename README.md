@@ -10,7 +10,7 @@ $ skywire-updater -h
 Updates skywire services
 
 Usage:
-  skywire-updater [assets/config.default.yml] [flags]
+  skywire-updater [/usr/local/skywire-updater/config.yml] [flags]
 
 Flags:
   -h, --help   help for skywire-updater
@@ -19,16 +19,15 @@ Flags:
 ## Installation
 
 Prerequisites:
-- Have [golang](https://golang.org/dl/) installed.
-- Enable [go modules](https://github.com/golang/go/wiki/Modules).
+- Have [golang](https://golang.org/dl/) installed. We need a version that supports [go modules](https://github.com/golang/go/wiki/Modules).
 
 ```bash
 # Clone.
 $ cd /usr/local
 $ git clone https://github.com/watercompany/skywire-updater
-$ cd skywire-updater
 
 # Install.
+$ cd skywire-updater
 $ GOPATH111MODULE=on go install ./...
 
 # Run.
@@ -37,7 +36,7 @@ $ skywire-updater
 
 ## Configuration
 
-The `config.skywire.yml` file is the default configuration for skywire.
+The [`config.yml`](/config.yml) file is the default configuration for skywire.
 
 The configuration file contains the following sections:
 - `paths:` - Specifies paths for the `skywire-updater`.
@@ -49,11 +48,11 @@ Here is an example configuration with comments:
 
 ```yaml
 paths: # Configures paths.
-  db-file: "/usr/local/skywire-updater/db.json"      # Database file location ("db.json" if unspecified).
-  scripts-path: "/usr/local/skywire-updater/scripts" # Scripts folder location ("scripts" if unspecified).
+  db-file: "/usr/local/skywire-updater/db.json"      # Database file location ("/usr/local/skywire-updater/db.json" if unspecified).
+  scripts-path: "/usr/local/skywire-updater/scripts" # Scripts folder location ("/usr/local/skywire-updater/scripts" if unspecified).
 
 interfaces: # Configures network interfaces.
-  addr: ":8080" # Address to bind and listen from (":7280" if unspecified).
+  addr: ":8080"     # Address to bind and listen from (":7280" if unspecified).
   enable-rest: true # Whether to enable RESTful interface served from {addr}/api/ (true if unspecified).
   enable-rpc: true  # Whether to enable RPC interface served from {addr}/rpc/ (true if unspecified).
 
@@ -121,13 +120,3 @@ func main() {
 ```
 
 Note that the RPC and REST interfaces of the `skywire-updater` are served on the same port (but on different paths).
-
-## Running in Docker 
-***WARNING: untested - requires updating.***
-
-The image can be pulled via `docker pull skycoin/updater` or it can be built with `docker build . [your-image-name]`.
-
-By default, the docker image doesn't provides any configuration, so you will have to place one inside using the tag `-v [your-configuration]:/updater/configuration.yml`, updater is looking for that file by default, if you use a different one you should tell updater with `-config [path-to-your-config]` flag.
-
-An example of command to run the docker image would be:
-`docker run -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd)/configuration.yml:/updater/configuration.yml --rm -it skycoin/updater:0.0.1`.

@@ -6,10 +6,17 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	yaml "gopkg.in/yaml.v2"
 )
+
+// Config represents an updater service configuration
+type Config struct {
+	Paths      PathsConfig               `yaml:"paths"`
+	Interfaces InterfacesConfig          `yaml:"interfaces"`
+	Defaults   DefaultsConfig            `yaml:"defaults"`
+	Services   map[string]*ServiceConfig `yaml:"services"`
+}
 
 // PathsConfig configures the paths for the updater.
 type PathsConfig struct {
@@ -29,6 +36,15 @@ type DefaultsConfig struct {
 	MainBranch  string   `yaml:"main-branch"`
 	Interpreter string   `yaml:"interpreter"`
 	Envs        []string `yaml:"envs"`
+}
+
+// ServiceConfig represents one of the services to be updated
+type ServiceConfig struct {
+	Repo        string        `yaml:"repo,omitempty"`
+	MainBranch  string        `yaml:"main-branch,omitempty"`
+	MainProcess string        `yaml:"main-process"`
+	Checker     CheckerConfig `yaml:"checker"`
+	Updater     UpdaterConfig `yaml:"updater"`
 }
 
 // CheckerConfig is the configuration for a service's checker.
@@ -53,73 +69,12 @@ type UpdaterConfig struct {
 	Envs        []string `yaml:"envs,omitempty"`
 }
 
-// ServiceConfig represents one of the services to be updated
-type ServiceConfig struct {
-	Repo        string        `yaml:"repo,omitempty"`
-	MainBranch  string        `yaml:"main-branch,omitempty"`
-	MainProcess string        `yaml:"main-process"`
-	Checker     CheckerConfig `yaml:"checker"`
-	Updater     UpdaterConfig `yaml:"updater"`
-}
-
-func (sc *ServiceConfig) process(scriptsPath string, d *DefaultsConfig) error {
-	if sc.Repo != "" {
-		if sc.MainBranch == "" {
-			sc.MainBranch = d.MainBranch
-		}
-		if sc.Checker.Type == "" {
-			sc.Checker.Type = ScriptCheckerType
-		}
-		if sc.Checker.Type == ScriptCheckerType {
-			if sc.Checker.Interpreter == "" {
-				sc.Checker.Interpreter = d.Interpreter
-			}
-			if sc.Checker.Script == "" {
-				return errors.New("checker.script needs to be defined")
-			}
-			if scriptsPath != "" {
-				sc.Checker.Script = filepath.Join(scriptsPath, sc.Checker.Script)
-			}
-			if err := scriptOK(sc.Checker.Script); err != nil {
-				return fmt.Errorf("checker.script cannot be accessed: %s", err.Error())
-			}
-		}
-		if sc.Updater.Type == "" {
-			sc.Updater.Type = ScriptUpdaterType
-		}
-		if sc.Updater.Type == ScriptUpdaterType {
-			if sc.Updater.Interpreter == "" {
-				sc.Updater.Interpreter = d.Interpreter
-			}
-			if sc.Updater.Script == "" {
-				return errors.New("updater.script needs to be defined")
-			}
-			if scriptsPath != "" {
-				sc.Updater.Script = filepath.Join(scriptsPath, sc.Updater.Script)
-			}
-			if err := scriptOK(sc.Updater.Script); err != nil {
-				return fmt.Errorf("updater.script cannot be accessed: %s", err.Error())
-			}
-		}
-	}
-	return nil
-}
-
-// Config represents an updater service configuration
-type Config struct {
-	Paths      PathsConfig               `yaml:"paths"`
-	Interfaces InterfacesConfig          `yaml:"interfaces"`
-	Defaults   DefaultsConfig            `yaml:"defaults"`
-	Services   map[string]*ServiceConfig `yaml:"services"`
-}
-
 // NewConfig returns a config with default values.
 func NewConfig() *Config {
-	rootDir := filepath.Join(userHomeDir(), ".skywire/updater")
 	return &Config{
 		Paths: PathsConfig{
-			DBFile:      filepath.Join(rootDir, "db.json"),
-			ScriptsPath: filepath.Join(rootDir, "scripts"),
+			DBFile:      "/usr/local/skywire-updater/db.json",
+			ScriptsPath: "/usr/local/skywire-updater/scripts",
 		},
 		Interfaces: InterfacesConfig{
 			Addr:       ":7280",
@@ -146,7 +101,7 @@ func ParseConfig(path string) (*Config, error) {
 		return nil, err
 	}
 	for name, srv := range conf.Services {
-		if err := srv.process(conf.Paths.ScriptsPath, &conf.Defaults); err != nil {
+		if err := processServiceConfig(srv, conf.Paths.ScriptsPath, &conf.Defaults); err != nil {
 			return nil, fmt.Errorf("invalid service %s: %s", name, err.Error())
 		}
 	}
@@ -161,20 +116,46 @@ func ParseConfig(path string) (*Config, error) {
 	return conf, nil
 }
 
-// SRC: https://github.com/spf13/viper/blob/80ab6657f9ec7e5761f6603320d3d58dfe6970f6/util.go#L144-L153
-func userHomeDir() string {
-	if runtime.GOOS == "windows" {
-		home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
-		if home == "" {
-			home = os.Getenv("USERPROFILE")
+// Checks for errors and fills unspecified fields with default values.
+func processServiceConfig(sc *ServiceConfig, scriptsPath string, d *DefaultsConfig) error {
+	if sc.Repo != "" {
+		if sc.MainBranch == "" {
+			sc.MainBranch = d.MainBranch
 		}
-		return home
+		if sc.Checker.Type == "" {
+			sc.Checker.Type = ScriptCheckerType
+		}
+		if sc.Checker.Type == ScriptCheckerType {
+			if sc.Checker.Interpreter == "" {
+				sc.Checker.Interpreter = d.Interpreter
+			}
+			if sc.Checker.Script == "" {
+				return errors.New("checker.script needs to be defined")
+			}
+			if scriptsPath != "" {
+				sc.Checker.Script = filepath.Join(scriptsPath, sc.Checker.Script)
+			}
+			if _, err := os.Stat(sc.Checker.Script); err != nil {
+				return fmt.Errorf("checker.script cannot be accessed: %s", err.Error())
+			}
+		}
+		if sc.Updater.Type == "" {
+			sc.Updater.Type = ScriptUpdaterType
+		}
+		if sc.Updater.Type == ScriptUpdaterType {
+			if sc.Updater.Interpreter == "" {
+				sc.Updater.Interpreter = d.Interpreter
+			}
+			if sc.Updater.Script == "" {
+				return errors.New("updater.script needs to be defined")
+			}
+			if scriptsPath != "" {
+				sc.Updater.Script = filepath.Join(scriptsPath, sc.Updater.Script)
+			}
+			if _, err := os.Stat(sc.Updater.Script); err != nil {
+				return fmt.Errorf("updater.script cannot be accessed: %s", err.Error())
+			}
+		}
 	}
-	return os.Getenv("HOME")
-}
-
-// determines if the script can be accessed.
-func scriptOK(name string) error {
-	_, err := os.Stat(name)
-	return err
+	return nil
 }

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -14,13 +15,15 @@ import (
 	"github.com/watercompany/skywire-updater/pkg/update"
 )
 
+const defaultConfigPath = "/usr/local/skywire-updater/config.yml"
+
 var log = logging.MustGetLogger("skywire-updater")
 
 var rootCmd = &cobra.Command{
-	Use:   "skywire-updater [/usr/local/skywire-updater/config.yml]",
+	Use:   fmt.Sprintf("skywire-updater [%s]", defaultConfigPath),
 	Short: "Updates skywire services",
 	Run: func(_ *cobra.Command, args []string) {
-		configPath := "/usr/local/skywire-updater/config.yml"
+		configPath := defaultConfigPath
 		if len(args) > 0 {
 			configPath = args[0]
 		}
