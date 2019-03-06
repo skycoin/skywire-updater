@@ -7,15 +7,16 @@ import (
 	"os"
 	"path/filepath"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
+
+	"github.com/skycoin/skywire-updater/internal/pathutil"
 )
 
 // Config represents an updater service configuration
 type Config struct {
-	Paths      PathsConfig               `yaml:"paths"`
-	Interfaces InterfacesConfig          `yaml:"interfaces"`
-	Defaults   DefaultsConfig            `yaml:"defaults"`
-	Services   map[string]*ServiceConfig `yaml:"services"`
+	Paths      PathsConfig      `yaml:"paths"`
+	Interfaces InterfacesConfig `yaml:"interfaces"`
+	Services   ServicesConfig   `yaml:"services"`
 }
 
 // PathsConfig configures the paths for the updater.
@@ -31,18 +32,26 @@ type InterfacesConfig struct {
 	EnableRPC  bool   `yaml:"enable-rpc"`
 }
 
-// DefaultsConfig is the configuration that is shared across all services (as default).
-type DefaultsConfig struct {
+// ServicesConfig configures all the services.
+type ServicesConfig struct {
+	Defaults ServiceDefaultsConfig     `yaml:"defaults"`
+	Services map[string]*ServiceConfig `yaml:"services"`
+}
+
+// ServiceDefaultsConfig is the configuration that is shared across all services (as default).
+type ServiceDefaultsConfig struct {
 	MainBranch  string   `yaml:"main-branch"`
+	BinDir      string   `yaml:"bin-dir"`
 	Interpreter string   `yaml:"interpreter"`
 	Envs        []string `yaml:"envs"`
 }
 
-// ServiceConfig represents one of the services to be updated
+// ServiceConfig represents one of the services to be updated.
 type ServiceConfig struct {
 	Repo        string        `yaml:"repo,omitempty"`
 	MainBranch  string        `yaml:"main-branch,omitempty"`
 	MainProcess string        `yaml:"main-process"`
+	BinDir      string        `yaml:"bin-dir,omitempty"`
 	Checker     CheckerConfig `yaml:"checker"`
 	Updater     UpdaterConfig `yaml:"updater"`
 }
@@ -69,55 +78,85 @@ type UpdaterConfig struct {
 	Envs        []string `yaml:"envs,omitempty"`
 }
 
-// NewConfig returns a config with default values.
-func NewConfig() *Config {
+// NewConfig returns a config with default values (from the provided root
+// directory and bin directory).
+func NewConfig(rootDir, binDir string) *Config {
 	return &Config{
 		Paths: PathsConfig{
-			DBFile:      "/usr/local/skywire-updater/db.json",
-			ScriptsPath: "/usr/local/skywire-updater/scripts",
+			DBFile:      filepath.Join(rootDir, "db.json"),
+			ScriptsPath: filepath.Join(rootDir, "scripts"),
 		},
 		Interfaces: InterfacesConfig{
 			Addr:       ":7280",
 			EnableREST: true,
 			EnableRPC:  true,
 		},
-		Defaults: DefaultsConfig{
-			MainBranch:  "master",
-			Interpreter: "/bin/bash",
-			Envs:        []string{},
+		Services: ServicesConfig{
+			Defaults: ServiceDefaultsConfig{
+				MainBranch:  "master",
+				BinDir:      binDir,
+				Interpreter: "/bin/bash",
+				Envs:        []string{},
+			},
+			Services: make(map[string]*ServiceConfig),
 		},
-		Services: make(map[string]*ServiceConfig),
 	}
 }
 
-// ParseConfig loads a configuration from the given json config filepath
-func ParseConfig(path string) (*Config, error) {
-	f, err := ioutil.ReadFile(path)
+// NewLocalConfig returns a config with default values, suitable for use by all
+// users of a system.
+func NewLocalConfig() *Config {
+	var (
+		rootDir = "/usr/local/skycoin/skywire-updater"
+		binDir  = "/usr/local/skycoin/bin"
+	)
+	return NewConfig(rootDir, binDir)
+}
+
+// NewHomeConfig returns a config with default values, suitable for use by the
+// local user.
+func NewHomeConfig() *Config {
+	var (
+		homeDir = pathutil.HomeDir()
+		rootDir = filepath.Join(homeDir, ".skycoin/skywire-updater")
+		binDir  = filepath.Join(homeDir, ".skycoin/bin")
+	)
+	return NewConfig(rootDir, binDir)
+}
+
+// Parse parses the config from a given yaml file path.
+func (c *Config) Parse(path string) error {
+	path, err := filepath.Abs(path)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	conf := NewConfig()
-	if err := yaml.Unmarshal(f, &conf); err != nil {
-		return nil, err
+	raw, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
 	}
-	for name, srv := range conf.Services {
-		if err := processServiceConfig(srv, conf.Paths.ScriptsPath, &conf.Defaults); err != nil {
-			return nil, fmt.Errorf("invalid service %s: %s", name, err.Error())
+	if err := yaml.Unmarshal(raw, c); err != nil {
+		return err
+	}
+	for name, srv := range c.Services.Services {
+		if err := processServiceConfig(srv, c.Paths.ScriptsPath, &c.Services.Defaults); err != nil {
+			return fmt.Errorf("invalid service %s: %s", name, err.Error())
 		}
 	}
 	{
-		out, err := yaml.Marshal(conf)
+		out, err := yaml.Marshal(c)
 		if err != nil {
 			log.WithError(err).Fatal()
 		}
 		log.Printf("Parsed Configuration:\n%s", string(out))
 	}
-
-	return conf, nil
+	return nil
 }
 
 // Checks for errors and fills unspecified fields with default values.
-func processServiceConfig(sc *ServiceConfig, scriptsPath string, d *DefaultsConfig) error {
+func processServiceConfig(sc *ServiceConfig, scriptsPath string, d *ServiceDefaultsConfig) error {
+	if sc.BinDir == "" {
+		sc.BinDir = d.BinDir
+	}
 	if sc.Repo != "" {
 		if sc.MainBranch == "" {
 			sc.MainBranch = d.MainBranch

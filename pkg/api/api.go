@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/skycoin/skycoin/src/util/logging"
 
-	"github.com/watercompany/skywire-updater/pkg/update"
+	"github.com/skycoin/skywire-updater/pkg/update"
 )
 
 const rpcPrefix = "updater"

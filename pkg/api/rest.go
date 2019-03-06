@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-chi/chi"
 
-	"github.com/watercompany/skywire-updater/pkg/update"
+	"github.com/skycoin/skywire-updater/pkg/update"
 )
 
 func handleREST(g Gateway) http.Handler {

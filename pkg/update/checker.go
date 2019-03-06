@@ -13,7 +13,7 @@ import (
 
 	"github.com/skycoin/skycoin/src/util/logging"
 
-	"github.com/watercompany/skywire-updater/pkg/store"
+	"github.com/skycoin/skywire-updater/pkg/store"
 )
 
 // CheckerType represents a Checker's type.
@@ -47,7 +47,7 @@ type Checker interface {
 }
 
 // NewChecker creates a new Checker and panics on failure.
-func NewChecker(db store.Store, srvName string, c ServiceConfig, d *DefaultsConfig) Checker {
+func NewChecker(db store.Store, srvName string, c ServiceConfig, d *ServiceDefaultsConfig) Checker {
 	switch c.Checker.Type {
 	case GithubReleaseCheckerType:
 		return NewGithubReleaseChecker(db, srvName, c)
@@ -63,12 +63,12 @@ func NewChecker(db store.Store, srvName string, c ServiceConfig, d *DefaultsConf
 // ScriptChecker checks via scripts.
 type ScriptChecker struct {
 	c   ServiceConfig
-	d   *DefaultsConfig
+	d   *ServiceDefaultsConfig
 	log *logging.Logger
 }
 
 // NewScriptChecker uses a given script as a checker.
-func NewScriptChecker(srvName string, c ServiceConfig, d *DefaultsConfig) *ScriptChecker {
+func NewScriptChecker(srvName string, c ServiceConfig, d *ServiceDefaultsConfig) *ScriptChecker {
 	return &ScriptChecker{
 		c:   c,
 		d:   d,

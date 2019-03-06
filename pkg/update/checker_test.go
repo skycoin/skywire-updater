@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/watercompany/skywire-updater/pkg/store"
+	"github.com/skycoin/skywire-updater/pkg/store"
 )
 
 const testCheckScript = `#!/bin/bash
@@ -48,7 +48,7 @@ func TestScriptChecker_Check(t *testing.T) {
 			Args:        []string{"arg1"},
 		},
 	}
-	checker := NewChecker(j, "my-service", c, new(DefaultsConfig))
+	checker := NewChecker(j, "my-service", c, new(ServiceDefaultsConfig))
 
 	r, err := checker.Check(context.TODO())
 	require.NoError(t, err)

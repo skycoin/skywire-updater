@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/watercompany/skywire-updater.svg?token=U4rdXdKvUqSqMgvR66wF&branch=master)](https://travis-ci.com/watercompany/skywire-updater)
+[![Build Status](https://travis-ci.com/skycoin/skywire-updater.svg?branch=mainnet)](https://travis-ci.com/skycoin/skywire-updater)
 
 # Skywire Updater
 
@@ -7,42 +7,67 @@
 ```
 $ skywire-updater -h
 
-Updates skywire services
+skywire-updater is responsible for checking for updates, and updating services
+associated with skywire.
+
+It takes one optional argument [config-path] which specifies the path to the
+configuration file to use. If no [config-path] is specified, the following 
+directories are searched in order:
+
+  1. /Users/anonymous/.skycoin/skywire-updater/config.yml
+  2. /usr/local/skycoin/skywire-updater/config.yml
 
 Usage:
-  skywire-updater [/usr/local/skywire-updater/config.yml] [flags]
+  skywire-updater [config-path] [flags]
+  skywire-updater [command]
+
+Available Commands:
+  help        Help about any command
+  init-config generates a configuration file
 
 Flags:
   -h, --help   help for skywire-updater
+
+Use "skywire-updater [command] --help" for more information about a command.
+
 ```
 
 ## Installation
+
+These instructions details the installation and configuration of `skywire-updater` in a user's home directory.
 
 Prerequisites:
 - Have [golang](https://golang.org/dl/) installed. We need a version that supports [go modules](https://github.com/golang/go/wiki/Modules).
 
 ```bash
 # Clone.
-$ cd /usr/local
 $ git clone https://github.com/watercompany/skywire-updater
+$ cd ./skywire-updater
 
-# Install.
-$ cd skywire-updater
-$ GOPATH111MODULE=on go install ./...
+# Build.
+$ GO111MODULE=on go build -o ~/.skycoin/bin/skywire-updater ./cmd/skywire-updater
+
+# Export path (would be a good idea to add this line to ~/.profile).
+$ export PATH=$PATH:$HOME/.skycoin/bin
+
+# Generate default config to ~/.skycoin/skywire-updater/config.yml
+$ skywire-updater init-config
+
+# Copy scripts.
+$ cp -R ./scripts ~/.skycoin/skywire-updater/scripts
 
 # Run.
 $ skywire-updater
+
 ```
 
 ## Configuration
 
-The [`config.yml`](/config.yml) file is the default configuration for skywire.
-
-The configuration file contains the following sections:
+A configuration file contains the following sections:
 - `paths:` - Specifies paths for the `skywire-updater`.
 - `interfaces:` - Specifies network interface settings.
-- `defaults:` - Specifies default values for `services`.
-- `services:` - Specifies services that the `skywire-updater` is responsible for.
+- `services.defaults:` - Specifies default values for `services`.
+- `services.services:` - Specifies services that the `skywire-updater` is responsible for.
 
 Here is an example configuration with comments:
 
@@ -56,35 +81,37 @@ interfaces: # Configures network interfaces.
   enable-rest: true # Whether to enable RESTful interface served from {addr}/api/ (true if unspecified).
   enable-rpc: true  # Whether to enable RPC interface served from {addr}/rpc/ (true if unspecified).
 
-defaults: # Configures default field values.
-  main-branch: "master"  # Default 'main-branch' field value ("master" if unspecified).
-  interpreter: "/bin/sh" # Default 'interpreter' field value ("/bin/bash" if unspecified).
-  envs:                  # Default 'envs' field values (none if unspecified).
-    - "BIN_DIR=/usr/local/skywire/bin"
-    - "APP_DIR=/usr/local/skywire/apps/bin"
 
 services: # Configures services.
-  skywire: # Service name/ID. This service is named "skywire".
-    repo:         "github.com/skycoin/skywire" # Repository URL. Should be of format: <domain>/<owner>/<name> . Will be saved in SKYUPD_REPO env for scripts.
-    main-branch:  "stable"                     # Main branch's name. Default will be used if not set. Will be saved in SKYUPD_MAIN_BRANCH env for scripts.
-    main-process: "skywire-node"               # Main executable's name. Will be saved in SKYUPD_MAIN_PROCESS env for scripts.
-    checker:                                            # Defines the service's checker (used to check for available updates).
-      type: "script"                                    # Type of checker. Valid: "script"(default), "github_release".
-      script: "check/bin-diff"                          # Required if checker type is "script": Specifies script to run (within '--scripts-dir' arg).
-      interpreter: "/bin/bash"                          # Required if checker type is "script": Specifies script interpreter. Default will be used if not set.
-      args: - "-v"                                      # Optional: Additional arguments for checker scripts.
-      envs:                                             # Optional: Set environment variables that can be used by checker.
-        - "APP_DIR=/usr/local/skywire/default-apps/bin" # This overrides default's APP_DIR definition.
-    updater:                                            # Defines the service's updater (actually updates the service's binaries and relevant files).
-      type: "script"                                    # Type of updater. Only "script"(default) is supported.
-      script: "update/skywire"                          # Required if updater type is "script": Specifies script to run (within '--scripts-dir' arg).
-      interpreter: "/bin/bash"                          # Required if updater type is "script": Specifies script interpreter. Default will be used if not set.
-      args: - "-v"                                      # Optional: Additional arguments for updater scripts.
-      envs:                                             # Optional: Set environment variables that can be used by updater.
-        - "APP_DIR=/usr/local/skywire/default-apps/bin" # This overrides default's APP_DIR definition.
+  defaults: # Configures default field values.
+    main-branch: "master"     # Default 'main-branch' field value.
+    bin-dir: "/usr/local/bin" # Default bin directory filed value.
+    interpreter: "/bin/sh"    # Default 'interpreter' field value.
+    envs:                     # Default 'envs' field values.
+      - "APP_DIR=/usr/local/skywire/apps/bin"
+  services:
+    skywire: # Service name/ID. This service is named "skywire".
+      repo:         "github.com/skycoin/skywire" # Repository URL. Should be of format: <domain>/<owner>/<name> . Will be saved in SWU_REPO env for scripts.
+      main-branch:  "stable"                     # Main branch's name. Default will be used if not set. Will be saved in SWU_MAIN_BRANCH env for scripts.
+      bin-dir:      "/usr/local/skycoin/bin"     # Bin Directory to build into. Will be saved in SWU_BIN_DIR for scripts.
+      main-process: "skywire-node"               # Main executable's name. Will be saved in SWU_MAIN_PROCESS env for scripts.
+      checker:                                            # Defines the service's checker (used to check for available updates).
+        type: "script"                                    # Type of checker. Valid: "script"(default), "github_release".
+        script: "check/bin-diff"                          # Required if checker type is "script": Specifies script to run (within '--scripts-dir' arg).
+        interpreter: "/bin/bash"                          # Required if checker type is "script": Specifies script interpreter. Default will be used if not set.
+        args: - "-v"                                      # Optional: Additional arguments for checker scripts.
+        envs:                                             # Optional: Set environment variables that can be used by checker.
+          - "APP_DIR=/usr/local/skywire/default-apps/bin" # This overrides default's APP_DIR definition.
+      updater:                                            # Defines the service's updater (actually updates the service's binaries and relevant files).
+        type: "script"                                    # Type of updater. Only "script"(default) is supported.
+        script: "update/skywire"                          # Required if updater type is "script": Specifies script to run (within '--scripts-dir' arg).
+        interpreter: "/bin/bash"                          # Required if updater type is "script": Specifies script interpreter. Default will be used if not set.
+        args: - "-v"                                      # Optional: Additional arguments for updater scripts.
+        envs:                                             # Optional: Set environment variables that can be used by updater.
+          - "APP_DIR=/usr/local/skywire/default-apps/bin" # This overrides default's APP_DIR definition.
 
-  another-service: # Another service. This service is named "another-service".
-    # The config for 'another-service' goes here ...
+    another-service: # Another service. This service is named "another-service".
+      # The config for 'another-service' goes here ...
 ```
 
 ## RESTful Endpoints
@@ -111,7 +138,7 @@ An RPC Client is provided in [/pkg/api/rpc.go](/pkg/api/rpc.go).
 ```go
 package main
 
-import "github.com/watercompany/skywire-updater/pkg/api"
+import "github.com/skycoin/skywire-updater/pkg/api"
 
 func main() {
 	client, err := api.DialRPC(":7280")

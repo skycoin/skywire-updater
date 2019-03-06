@@ -6,7 +6,7 @@ import (
 	"net/rpc"
 	"time"
 
-	"github.com/watercompany/skywire-updater/pkg/update"
+	"github.com/skycoin/skywire-updater/pkg/update"
 )
 
 func handleRPC(g Gateway) http.Handler {

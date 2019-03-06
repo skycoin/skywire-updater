@@ -33,7 +33,7 @@ func TestScriptUpdater_Update(t *testing.T) {
 			Args:        []string{"arg1"},
 		},
 	}
-	updater := NewUpdater("my-service", c, new(DefaultsConfig))
+	updater := NewUpdater("my-service", c, new(ServiceDefaultsConfig))
 
 	ok, err := updater.Update(context.TODO(), "v1.0")
 	assert.NoError(t, err)

@@ -8,27 +8,31 @@ import (
 const (
 	// EnvRepo can be used by checkers or updaters to determine the repository
 	// URL of the service.
-	EnvRepo = "SKYUPD_REPO"
+	EnvRepo = "SWU_REPO"
 
 	// EnvMainBranch can be used by checkers or updaters to determine the main
 	// branch fo the service.
-	EnvMainBranch = "SKYUPD_MAIN_BRANCH"
+	EnvMainBranch = "SWU_MAIN_BRANCH"
 
 	// EnvMainProcess can be used by checkers or updaters to determine the main
 	// process name for the service.
-	EnvMainProcess = "SKYUPD_MAIN_PROCESS"
+	EnvMainProcess = "SWU_MAIN_PROCESS"
+
+	// EnvBinDir can be used by checkers or updaters to determine the path in
+	// which to install the binaries.
+	EnvBinDir = "SWU_BIN_DIR"
 
 	// EnvToVersion can be used by updaters to determine the version to update
 	// the service to.
-	EnvToVersion = "SKYUPD_TO_VERSION"
+	EnvToVersion = "SWU_TO_VERSION"
 
 	// EnvGithubUsername can be used by checkers or updaters for github
 	// authentication (needs to be set manually).
-	EnvGithubUsername = "SKYUPD_GITHUB_USERNAME"
+	EnvGithubUsername = "SWU_GITHUB_USERNAME"
 
 	// EnvGithubAccessToken can be used by checkers or updaters scripts for
 	// github authentication (needs to be set manually).
-	EnvGithubAccessToken = "SKYUPD_GITHUB_ACCESS_TOKEN" //nolint:gosec
+	EnvGithubAccessToken = "SWU_GITHUB_ACCESS_TOKEN" //nolint:gosec
 )
 
 // MakeEnv makes an environment variable string of format '<key>=<value>'.
@@ -41,7 +45,7 @@ func MakeEnv(key, value string) string {
 // 1. Envs from Defaults.
 // 2. Envs from Service.
 // 3. Envs from Service.Checker.
-func CheckerEnvs(g *DefaultsConfig, s *ServiceConfig) []string {
+func CheckerEnvs(g *ServiceDefaultsConfig, s *ServiceConfig) []string {
 	return append(srvEnvs(g, s), s.Checker.Envs...)
 }
 
@@ -51,7 +55,7 @@ func CheckerEnvs(g *DefaultsConfig, s *ServiceConfig) []string {
 // 2. Envs from Service.
 // 3. Envs from Service.Updater.
 // 4. Add SKYUPD_TO_VERSION env.
-func UpdaterEnvs(g *DefaultsConfig, s *ServiceConfig, toVersion string) []string {
+func UpdaterEnvs(g *ServiceDefaultsConfig, s *ServiceConfig, toVersion string) []string {
 	envs := append(srvEnvs(g, s), s.Updater.Envs...)
 	if toVersion != "" {
 		envs = append(envs, MakeEnv(EnvToVersion, toVersion))
@@ -59,13 +63,16 @@ func UpdaterEnvs(g *DefaultsConfig, s *ServiceConfig, toVersion string) []string
 	return envs
 }
 
-func srvEnvs(g *DefaultsConfig, s *ServiceConfig) []string {
+func srvEnvs(g *ServiceDefaultsConfig, s *ServiceConfig) []string {
 	envs := append(os.Environ(), g.Envs...)
 	if s.Repo != "" {
 		envs = append(envs, MakeEnv(EnvRepo, s.Repo))
 	}
 	if s.MainBranch != "" {
 		envs = append(envs, MakeEnv(EnvMainBranch, s.MainBranch))
+	}
+	if s.BinDir != "" {
+		envs = append(envs, MakeEnv(EnvBinDir, s.BinDir))
 	}
 	if s.MainProcess != "" {
 		envs = append(envs, MakeEnv(EnvMainProcess, s.MainProcess))

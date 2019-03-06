@@ -44,7 +44,7 @@ func NewJSON(filePath string) (*JSON, error) {
 		log:  logging.MustGetLogger("store(JSON)"),
 	}
 
-	if err := os.MkdirAll(filepath.Dir(filePath), 0744); err != nil {
+	if err := os.MkdirAll(filepath.Dir(filePath), 0750); err != nil {
 		return nil, fmt.Errorf("failed to create db file: %s", err.Error())
 	}
 

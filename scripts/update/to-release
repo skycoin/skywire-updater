@@ -13,10 +13,10 @@ run() {
 export GO111MODULE=on
 
 temp_dir=`mktemp -d`
-repo=${SKYUPD_REPO}
-to_version=${SKYUPD_TO_VERSION}
-process=${SKYUPD_MAIN_PROCESS}
-bin_dir=${BIN_DIR}
+repo=${SWU_REPO}
+to_version=${SWU_TO_VERSION}
+process=${SWU_MAIN_PROCESS}
+bin_dir=${SWU_BIN_DIR}
 
 echo "## CLONE FROM GITHUB ##"
 # https://stackoverflow.com/questions/791959/download-a-specific-tag-with-git

@@ -9,7 +9,7 @@ import (
 
 	"github.com/skycoin/skycoin/src/util/logging"
 
-	"github.com/watercompany/skywire-updater/pkg/store"
+	"github.com/skycoin/skywire-updater/pkg/store"
 )
 
 var (
@@ -28,7 +28,7 @@ type srvEntry struct {
 
 // Manager manages checkers and updaters for services.
 type Manager struct {
-	global   DefaultsConfig
+	global   ServiceDefaultsConfig
 	services map[string]srvEntry
 	mu       sync.RWMutex
 	db       store.Store
@@ -37,11 +37,11 @@ type Manager struct {
 // NewManager creates a new manager.
 func NewManager(db store.Store, conf *Config) *Manager {
 	d := &Manager{
-		global:   conf.Defaults,
+		global:   conf.Services.Defaults,
 		services: make(map[string]srvEntry),
 		db:       db,
 	}
-	for name, srv := range conf.Services {
+	for name, srv := range conf.Services.Services {
 		d.services[name] = srvEntry{
 			ServiceConfig: *srv,
 			Checker:       NewChecker(db, name, *srv, &d.global),

@@ -13,10 +13,10 @@ run() {
 export GO111MODULE=on
 
 temp_dir=`mktemp -d`
-repo=${SKYUPD_REPO}
-branch=${SKYUPD_MAIN_BRANCH}
-process=${SKYUPD_MAIN_PROCESS}
-bin_dir=${BIN_DIR}
+repo=${SWU_REPO}
+branch=${SWU_MAIN_BRANCH}
+process=${SWU_MAIN_PROCESS}
+bin_dir=${SWU_BIN_DIR}
 
 echo "## CLONING FROM GITHUB ##"
 run "git clone -b ${branch} https://${repo}.git ${temp_dir}"

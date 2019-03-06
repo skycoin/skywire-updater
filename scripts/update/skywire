@@ -13,8 +13,8 @@ run() {
 export GO111MODULE=on
 
 temp_dir=`mktemp -d`
-repo=${SKYUPD_REPO}
-bin_dir=${BIN_DIR}
+repo=${SWU_REPO}
+bin_dir=${SWU_BIN_DIR}
 app_dir=${APP_DIR}
 
 echo "## CLONE FROM GITHUB ##"
@@ -38,15 +38,16 @@ build manager-node
 echo "## BUILD APPS ##"
 build_app() {
     app=${1}
+    ver=${2}
     run "cd ${temp_dir}/cmd/apps/${app}"
-    run "go build -o ${app_dir}/${app}"
+    run "go build -o ${app_dir}/${app}.${ver}"
 }
-build_app chat
-build_app helloworld
-build_app therealproxy
-build_app therealproxy-client
-build_app therealssh
-build_app therealssh-client
+build_app chat v1.0
+build_app helloworld v1.0
+build_app therealproxy v1.0
+build_app therealproxy-client v1.0
+build_app therealssh v1.0
+build_app therealssh-client v1.0
 
 echo "## CLEAN UP ##"
 run "rm -rf ${temp_dir}"

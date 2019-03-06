@@ -25,7 +25,7 @@ type Updater interface {
 }
 
 // NewUpdater creates a new updater.
-func NewUpdater(srvName string, c ServiceConfig, d *DefaultsConfig) Updater {
+func NewUpdater(srvName string, c ServiceConfig, d *ServiceDefaultsConfig) Updater {
 	switch c.Updater.Type {
 	case ScriptUpdaterType:
 		return NewScriptUpdater(srvName, c, d)
@@ -39,12 +39,12 @@ func NewUpdater(srvName string, c ServiceConfig, d *DefaultsConfig) Updater {
 // ScriptUpdater is an implementation of updater using scripts.
 type ScriptUpdater struct {
 	c   ServiceConfig
-	d   *DefaultsConfig
+	d   *ServiceDefaultsConfig
 	log *logging.Logger
 }
 
 // NewScriptUpdater creates a new ScriptUpdater.
-func NewScriptUpdater(srvName string, c ServiceConfig, d *DefaultsConfig) *ScriptUpdater {
+func NewScriptUpdater(srvName string, c ServiceConfig, d *ServiceDefaultsConfig) *ScriptUpdater {
 	return &ScriptUpdater{
 		c:   c,
 		d:   d,
