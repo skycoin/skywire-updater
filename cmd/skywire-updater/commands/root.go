@@ -1,12 +1,10 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/skycoin/skycoin/src/util/logging"
 	"github.com/spf13/cobra"
@@ -17,23 +15,14 @@ import (
 	"github.com/skycoin/skywire-updater/pkg/update"
 )
 
+const configEnv = "SW_UPDATER_CONFIG"
+
 var log = logging.MustGetLogger("skywire-updater")
 
-var defaultConfigPaths = [2]string{
-	filepath.Join(pathutil.HomeDir(), ".skycoin/skywire-updater/config.yml"),
-}
-
-func findConfigPath() (string, error) {
-	log.Info("configuration file is not explicitly specified, attempting to find one in default paths ...")
-	for i, cPath := range defaultConfigPaths {
-		if _, err := os.Stat(cPath); err != nil {
-			log.Infof("- [%d/%d] '%s' does not exist", i, len(defaultConfigPaths), cPath)
-		} else {
-			log.Infof("- [%d/%d] '%s' exists (using this one)", i, len(defaultConfigPaths), cPath)
-			return cPath, nil
-		}
-	}
-	return "", errors.New("no configuration file found")
+var defaultConfigPaths = [3]string{
+	pathutil.UpdaterDefaults()[pathutil.WorkingDirLoc],
+	pathutil.UpdaterDefaults()[pathutil.HomeLoc],
+	pathutil.UpdaterDefaults()[pathutil.LocalLoc],
 }
 
 // RootCmd is the command to run when no sub-commands are specified.
@@ -48,18 +37,12 @@ configuration file to use. If no [config-path] is specified, the following
 directories are searched in order:
 
   1. %s
-  2. %s`, defaultConfigPaths[0], defaultConfigPaths[1]),
+  2. %s 
+  3. %s`,defaultConfigPaths[0], defaultConfigPaths[1], defaultConfigPaths[2]),
 	Short: "Updates skywire services",
 	Run: func(_ *cobra.Command, args []string) {
-		var configPath string
-		if len(args) == 0 {
-			var err error
-			if configPath, err = findConfigPath(); err != nil {
-				log.WithError(err).Fatal()
-			}
-		} else {
-			configPath = args[0]
-		}
+
+		configPath := pathutil.FindConfigPath(args, 0, configEnv, pathutil.UpdaterDefaults())
 
 		log.Infof("config path: '%s'", configPath)
 		conf := update.NewConfig(".", "./bin")
