@@ -8,9 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// https://nathanleclaire.com/blog/2015/10/10/interfaces-and-composition-for-effective-unit-testing-in-golang/
-
 var wd, err = os.Getwd()
+
+var defaultDir = ConfigPaths{
+	WorkingDirLoc: filepath.Join(wd, "config.yml"),
+	HomeLoc:       filepath.Join(HomeDir(), ".skycoin/skywire-updater/config.yml"),
+	LocalLoc:      "/usr/local/skycoin/skywire-updater/config.yml",
+}
 
 type inputs = struct {
 	args      []string
@@ -25,20 +29,10 @@ var tables = []struct {
 	expectedMsg string
 }{
 	{
-		description: "args",
-		in:          inputs{[]string{"/home/anto/.skycoin/skywire-updater/config.yml"}, 0, "SW_MANAGER_CONFIG", ConfigPaths{"HOME": filepath.Join(HomeDir(), ".skycoin/skywire-updater/config.yml")}},
+		description: "defaultConfig",
+		in:          inputs{[]string{}, 0, "SW_MANAGER_CONFIG", defaultDir},
 		expectedMsg: filepath.Join(HomeDir(), ".skycoin/skywire-updater/config.yml"),
 	},
-	// {
-	// 	description: "WD",
-	// 	in:          inputs{[]string{}, 0, "SW_MANAGER_CONFIG", ConfigPaths{"WD": filepath.Join(wd, "config.yml")}},
-	// 	expectedMsg: filepath.Join(HomeDir(), ".skycoin/skywire-updater/config.yml"),
-	// },
-	// {
-	// 	description: "HOME",
-	// 	in:          inputs{[]string{}, 0, "SW_MANAGER_CONFIG", ConfigPaths{"HOME": filepath.Join(HomeDir(), ".skycoin/skywire-updater/config.yml")}},
-	// 	expectedMsg: filepath.Join(HomeDir(), ".skycoin/skywire-updater/config.yml"),
-	// },
 }
 
 func TestFindConfigPath(t *testing.T) {
@@ -47,10 +41,13 @@ func TestFindConfigPath(t *testing.T) {
 		t.Run(tt.description, func(t *testing.T) {
 
 			assert := assert.New(t)
+
+			// Assert err from os.Getwd()
+			assert.Nil(err)
+
 			configPath := FindConfigPath(tt.in.args, tt.in.argsIndex, tt.in.env, tt.in.defaults)
 
-			assert.Nil(err)
-			assert.Equal(configPath, tt.expectedMsg, "They should be equal")
+			assert.Equal(configPath, tt.expectedMsg, "This should be equal!")
 		})
 	}
 }
