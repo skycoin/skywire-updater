@@ -97,7 +97,7 @@ var initConfigCmd = &cobra.Command{
 }
 
 func init() {
-	initConfigCmd.Flags().StringVarP(&output, "output", "o", defaultConfigPaths[0], "path of output config file.")
+	initConfigCmd.Flags().StringVarP(&output, "output", "o", defaultPaths[pathutil.HomeLoc], "path of output config file.")
 	initConfigCmd.Flags().BoolVarP(&replace, "replace", "r", false, "whether to allow rewrite of a file that already exists.")
 	initConfigCmd.Flags().StringVarP(&mode, "mode", "m", homeMode, fmt.Sprintf("config generation mode. Valid values: %v", initConfigModes))
 }

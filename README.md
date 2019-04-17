@@ -8,7 +8,7 @@
 $ skywire-updater -h
 
 skywire-updater is responsible for checking for updates, and updating services
-associated with skywire. Services to be updated will be based on a specified configuration file.
+associated with skywire. Services to be updated will be based on specified configuration files.
 
 Usage:
   skywire-updater [command]

@@ -14,11 +14,7 @@ import (
 
 const configEnv = "SW_UPDATER_CONFIG"
 
-var defaultConfigPaths = [3]string{
-	pathutil.UpdaterDefaults()[pathutil.WorkingDirLoc],
-	pathutil.UpdaterDefaults()[pathutil.HomeLoc],
-	pathutil.UpdaterDefaults()[pathutil.LocalLoc],
-}
+var defaultPaths = pathutil.UpdaterDefaults()
 
 var updateCmd = &cobra.Command{
 	Use:   "update",
@@ -30,7 +26,7 @@ var updateCmd = &cobra.Command{
 
 	  1. %s
 	  2. %s
-	  3. %s`, defaultConfigPaths[0], defaultConfigPaths[1], defaultConfigPaths[2]),
+	  3. %s`, defaultPaths[pathutil.WorkingDirLoc], defaultPaths[pathutil.HomeLoc], defaultPaths[pathutil.LocalLoc]),
 	Run: func(_ *cobra.Command, args []string) {
 		configPath := pathutil.FindConfigPath(args, 0, configEnv, pathutil.UpdaterDefaults())
 
