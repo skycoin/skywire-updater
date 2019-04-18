@@ -36,6 +36,7 @@ github.com/go-toolsmith/typep v0.0.0-20181030061450-d63dc7650676 h1:6Qrsp0+25KEk
 github.com/go-toolsmith/typep v0.0.0-20181030061450-d63dc7650676/go.mod h1:JSQCQMUPdRlMZFswiq3TGpNp1GMktqkR2Ns5AIQkATU=
 github.com/gobwas/glob v0.2.3 h1:A4xDbljILXROh+kObIiy5kIaPYD8e96x1tgBhUI5J+Y=
 github.com/gobwas/glob v0.2.3/go.mod h1:d3Ez4x06l9bZtSvzIay5+Yzi0fmZzPgnTbPcKjJAkT8=
+github.com/gogo/protobuf v1.0.0/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
 github.com/gogo/protobuf v1.1.1 h1:72R+M5VuhED/KujmZVcIquuo8mBgX4oVda//DQb3PXo=
 github.com/gogo/protobuf v1.1.1/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
 github.com/golang/mock v1.1.1 h1:G5FRp8JnTd7RQH5kemVNlMeyXQAztQ3mOWV95KxsXH8=
@@ -58,6 +59,8 @@ github.com/golangci/gocyclo v0.0.0-20180528134321-2becd97e67ee h1:J2XAy40+7yz70u
 github.com/golangci/gocyclo v0.0.0-20180528134321-2becd97e67ee/go.mod h1:ozx7R9SIwqmqf5pRP90DhR2Oay2UIjGuKheCBCNwAYU=
 github.com/golangci/gofmt v0.0.0-20181105071733-0b8337e80d98 h1:ir6/L2ZOJfFrJlOTsuf/hlzdPuUwXV/VzkSlgS6f1vs=
 github.com/golangci/gofmt v0.0.0-20181105071733-0b8337e80d98/go.mod h1:9qCChq59u/eW8im404Q2WWTrnBUQKjpNYKMbU4M7EFU=
+github.com/golangci/golangci-lint v1.14.0 h1:TXr7dwyCx1H3kPU2ddI39JXfuZnK6hfPrMjEB/tOcTw=
+github.com/golangci/golangci-lint v1.14.0/go.mod h1:35dsx5Hoe3V4+jk3X6u5N1FQF4Hllm+/o9yjQ2wwKkA=
 github.com/golangci/golangci-lint v1.15.0 h1:Cvf5J2U5C5kAHSXxyLRJ38/OqdJbiU7SAJRYvWgO/b0=
 github.com/golangci/golangci-lint v1.15.0/go.mod h1:iEsyA2h6yMxPzFAlb/Q9UuXBrXIDtXkbUoukuqUAX/8=
 github.com/golangci/golangci-lint v1.16.0 h1:PcWAN9JHflZzJQaZVY1JXZE0Tgjq+jO2v4QLqJ/Azvw=
@@ -213,7 +216,9 @@ mvdan.cc/lint v0.0.0-20170908181259-adc824a0674b h1:DxJ5nJdkhDlLok9K6qO+5290kphD
 mvdan.cc/lint v0.0.0-20170908181259-adc824a0674b/go.mod h1:2odslEg/xrtNQqCYg2/jCoyKnw3vv5biOc3JnIcYfL4=
 mvdan.cc/unparam v0.0.0-20190124213536-fbb59629db34 h1:B1LAOfRqg2QUyCdzfjf46quTSYUTAK5OCwbh6pljHbM=
 mvdan.cc/unparam v0.0.0-20190124213536-fbb59629db34/go.mod h1:H6SUd1XjIs+qQCyskXg5OFSrilMRUkD8ePJpHKDPaeY=
+sourcegraph.com/sourcegraph/go-diff v0.0.0-20171119081133-3f415a150aec/go.mod h1:R09mWeb9JcPbO+A3cYDc11xjz0wp6r9+KnqdqROAoRU=
 sourcegraph.com/sourcegraph/go-diff v0.5.1-0.20190210232911-dee78e514455 h1:qoQ5Kt+Zm+GXBtz49YwD3juBhr/E0U25jO6bBzxW6NI=
 sourcegraph.com/sourcegraph/go-diff v0.5.1-0.20190210232911-dee78e514455/go.mod h1:kuch7UrkMzY0X+p9CRK03kfuPQ2zzQcaEFbx8wA8rck=
+sourcegraph.com/sqs/pbtypes v0.0.0-20160107090929-4d1b9dc7ffc3/go.mod h1:ketZ/q3QxT9HOBeFhu6RdvsftgpsbFHBF5Cas6cDKZ0=
 sourcegraph.com/sqs/pbtypes v0.0.0-20180604144634-d3ebe8f20ae4 h1:JPJh2pk3+X4lXAkZIk2RuE/7/FoK9maXw+TNPJhVS/c=
 sourcegraph.com/sqs/pbtypes v0.0.0-20180604144634-d3ebe8f20ae4/go.mod h1:ketZ/q3QxT9HOBeFhu6RdvsftgpsbFHBF5Cas6cDKZ0=

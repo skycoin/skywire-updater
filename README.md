@@ -8,20 +8,29 @@
 $ skywire-updater -h
 
 skywire-updater is responsible for checking for updates, and updating services
-associated with skywire. Services to be updated will be based on specified configuration files.
+associated with skywire. 
+
+It takes one optional argument [config-path] which specifies the path to the
+configuration file to use. If no [config-path] is specified, the following 
+directories are searched in order:
+
+  1. /your_working_directory/config.yml
+  2. /home/anonymous/.skycoin/skywire-updater/config.yml
+  3. /usr/local/skycoin/skywire-updater/config.yml
 
 Usage:
+  skywire-updater [config-path] [flags]
   skywire-updater [command]
 
 Available Commands:
   help        Help about any command
   init-config generates a configuration file
-  update      update services based on configuration file
 
 Flags:
   -h, --help   help for skywire-updater
 
 Use "skywire-updater [command] --help" for more information about a command.
+
 ```
 
 ## Installation

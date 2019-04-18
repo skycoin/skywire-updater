@@ -14,8 +14,8 @@ install-linters: ## Install linters
 	GO111MODULE=on go get -u github.com/FiloSottile/vendorcheck
 	# For some reason this install method is not recommended, see https://github.com/golangci/golangci-lint#install
 	# However, they suggest `curl ... | bash` which we should not do
-	# GO111MODULE=on go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
-	GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.16.0
+	GO111MODULE=on go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+	# GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.16.0
 
 format: ## Formats the code. Must have goimports installed (use make install-linters).
 	GO111MODULE=on goimports -w -local github.com/watercompany/skywire-updater ./pkg
