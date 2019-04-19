@@ -5,12 +5,13 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/skycoin/skycoin/src/util/logging"
 	"github.com/skycoin/skywire-updater/pkg/api"
 	"github.com/skycoin/skywire-updater/pkg/store"
 	"github.com/skycoin/skywire-updater/pkg/update"
-	"github.com/skycoin/skywire-updater/pkg/util/pathutil"
+	"github.com/skycoin/skywire/pkg/util/pathutil"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +19,18 @@ const configEnv = "SW_UPDATER_CONFIG"
 
 var log = logging.MustGetLogger("skywire-updater")
 
-var defaultPaths = pathutil.UpdaterDefaults()
+// UpdaterDefaults returns the default config paths for Skywire-Updater.
+func UpdaterDefaults() pathutil.ConfigPaths {
+	paths := make(pathutil.ConfigPaths)
+	if wd, err := os.Getwd(); err == nil {
+		paths[pathutil.WorkingDirLoc] = filepath.Join(wd, "config.yml")
+	}
+	paths[pathutil.HomeLoc] = filepath.Join(pathutil.HomeDir(), ".skycoin/skywire-updater/config.yml")
+	paths[pathutil.LocalLoc] = "/usr/local/skycoin/skywire-updater/config.yml"
+	return paths
+}
+
+var defaultPaths = UpdaterDefaults()
 
 // RootCmd is the command to run when no sub-commands are specified.
 // TraverseChildren set to true enables cobra to parse local flags on each command before executing target command
@@ -27,10 +39,10 @@ var RootCmd = &cobra.Command{
 	Short: "Updates skywire services",
 	Long: fmt.Sprintf(`
 skywire-updater is responsible for checking for updates, and updating services
-associated with skywire. 
+associated with skywire.
 
 It takes one optional argument [config-path] which specifies the path to the
-configuration file to use. If no [config-path] is specified, the following 
+configuration file to use. If no [config-path] is specified, the following
 directories are searched in order:
 
   1. %s
@@ -39,7 +51,7 @@ directories are searched in order:
 	TraverseChildren: true,
 	Run: func(_ *cobra.Command, args []string) {
 
-		configPath := pathutil.FindConfigPath(args, 0, configEnv, pathutil.UpdaterDefaults())
+		configPath := pathutil.FindConfigPath(args, 0, configEnv, UpdaterDefaults())
 
 		log.Infof("config path: '%s'", configPath)
 		conf := update.NewConfig(".", "./bin")

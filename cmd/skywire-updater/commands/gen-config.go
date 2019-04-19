@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/skycoin/skywire-updater/pkg/update"
-	"github.com/skycoin/skywire-updater/pkg/util/pathutil"
+	"github.com/skycoin/skywire/pkg/util/pathutil"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
