@@ -27,9 +27,9 @@ github.com/spf13/pflag
 # github.com/stretchr/testify v1.3.0
 github.com/stretchr/testify/require
 github.com/stretchr/testify/assert
-# golang.org/x/crypto v0.0.0-20190411191339-88737f569e3a
+# golang.org/x/crypto v0.0.0-20190418165655-df01cb2cc480
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/sys v0.0.0-20190416152802-12500544f89f
+# golang.org/x/sys v0.0.0-20190418153312-f0ce4c0180be
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 # gopkg.in/yaml.v2 v2.2.2

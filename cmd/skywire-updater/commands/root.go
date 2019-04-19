@@ -8,11 +8,13 @@ import (
 	"path/filepath"
 
 	"github.com/skycoin/skycoin/src/util/logging"
+	"github.com/spf13/cobra"
+
+	"github.com/skycoin/skywire/pkg/util/pathutil"
+
 	"github.com/skycoin/skywire-updater/pkg/api"
 	"github.com/skycoin/skywire-updater/pkg/store"
 	"github.com/skycoin/skywire-updater/pkg/update"
-	"github.com/skycoin/skywire/pkg/util/pathutil"
-	"github.com/spf13/cobra"
 )
 
 const configEnv = "SW_UPDATER_CONFIG"
@@ -51,7 +53,7 @@ directories are searched in order:
 	TraverseChildren: true,
 	Run: func(_ *cobra.Command, args []string) {
 
-		configPath := pathutil.FindConfigPath(args, 0, configEnv, UpdaterDefaults())
+		configPath := pathutil.FindConfigPath(args, 0, configEnv, defaultPaths)
 
 		log.Infof("config path: '%s'", configPath)
 		conf := update.NewConfig(".", "./bin")

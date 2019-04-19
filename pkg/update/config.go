@@ -7,8 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/skycoin/skywire/pkg/util/pathutil"
 	"gopkg.in/yaml.v2"
+
+	"github.com/skycoin/skywire/pkg/util/pathutil"
 )
 
 // Config represents an updater service configuration
