@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,55 +10,50 @@ import (
 	"github.com/skycoin/skycoin/src/util/logging"
 	"github.com/spf13/cobra"
 
-	"github.com/skycoin/skywire-updater/internal/pathutil"
+	"github.com/skycoin/skywire/pkg/util/pathutil"
+
 	"github.com/skycoin/skywire-updater/pkg/api"
 	"github.com/skycoin/skywire-updater/pkg/store"
 	"github.com/skycoin/skywire-updater/pkg/update"
 )
 
+const configEnv = "SW_UPDATER_CONFIG"
+
 var log = logging.MustGetLogger("skywire-updater")
 
-var defaultConfigPaths = [2]string{
-	filepath.Join(pathutil.HomeDir(), ".skycoin/skywire-updater/config.yml"),
+// UpdaterDefaults returns the default config paths for Skywire-Updater.
+func UpdaterDefaults() pathutil.ConfigPaths {
+	paths := make(pathutil.ConfigPaths)
+	if wd, err := os.Getwd(); err == nil {
+		paths[pathutil.WorkingDirLoc] = filepath.Join(wd, "config.yml")
+	}
+	paths[pathutil.HomeLoc] = filepath.Join(pathutil.HomeDir(), ".skycoin/skywire-updater/config.yml")
+	paths[pathutil.LocalLoc] = "/usr/local/skycoin/skywire-updater/config.yml"
+	return paths
 }
 
-func findConfigPath() (string, error) {
-	log.Info("configuration file is not explicitly specified, attempting to find one in default paths ...")
-	for i, cPath := range defaultConfigPaths {
-		if _, err := os.Stat(cPath); err != nil {
-			log.Infof("- [%d/%d] '%s' does not exist", i, len(defaultConfigPaths), cPath)
-		} else {
-			log.Infof("- [%d/%d] '%s' exists (using this one)", i, len(defaultConfigPaths), cPath)
-			return cPath, nil
-		}
-	}
-	return "", errors.New("no configuration file found")
-}
+var defaultPaths = UpdaterDefaults()
 
 // RootCmd is the command to run when no sub-commands are specified.
+// TraverseChildren set to true enables cobra to parse local flags on each command before executing target command
 var RootCmd = &cobra.Command{
-	Use: "skywire-updater [config-path]",
+	Use:   "skywire-updater [config-path]",
+	Short: "Updates skywire services",
 	Long: fmt.Sprintf(`
 skywire-updater is responsible for checking for updates, and updating services
 associated with skywire.
 
 It takes one optional argument [config-path] which specifies the path to the
-configuration file to use. If no [config-path] is specified, the following 
+configuration file to use. If no [config-path] is specified, the following
 directories are searched in order:
 
   1. %s
-  2. %s`, defaultConfigPaths[0], defaultConfigPaths[1]),
-	Short: "Updates skywire services",
+  2. %s
+  3. %s`, defaultPaths[pathutil.WorkingDirLoc], defaultPaths[pathutil.HomeLoc], defaultPaths[pathutil.LocalLoc]),
+	TraverseChildren: true,
 	Run: func(_ *cobra.Command, args []string) {
-		var configPath string
-		if len(args) == 0 {
-			var err error
-			if configPath, err = findConfigPath(); err != nil {
-				log.WithError(err).Fatal()
-			}
-		} else {
-			configPath = args[0]
-		}
+
+		configPath := pathutil.FindConfigPath(args, 0, configEnv, defaultPaths)
 
 		log.Infof("config path: '%s'", configPath)
 		conf := update.NewConfig(".", "./bin")
@@ -95,11 +89,13 @@ directories are searched in order:
 	},
 }
 
-// Execute executes root CLI command.
+// Execute executes root CLI command and add subcommands.
 func Execute() {
+
 	RootCmd.AddCommand(initConfigCmd)
 
 	if err := RootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
+
 }

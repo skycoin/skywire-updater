@@ -9,7 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 
-	"github.com/skycoin/skywire-updater/internal/pathutil"
+	"github.com/skycoin/skywire/pkg/util/pathutil"
+
 	"github.com/skycoin/skywire-updater/pkg/update"
 )
 
@@ -98,7 +99,7 @@ var initConfigCmd = &cobra.Command{
 }
 
 func init() {
-	initConfigCmd.Flags().StringVarP(&output, "output", "o", defaultConfigPaths[0], "path of output config file.")
+	initConfigCmd.Flags().StringVarP(&output, "output", "o", defaultPaths[pathutil.HomeLoc], "path of output config file.")
 	initConfigCmd.Flags().BoolVarP(&replace, "replace", "r", false, "whether to allow rewrite of a file that already exists.")
 	initConfigCmd.Flags().StringVarP(&mode, "mode", "m", homeMode, fmt.Sprintf("config generation mode. Valid values: %v", initConfigModes))
 }
